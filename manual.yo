@@ -1,0 +1,28 @@
+manpage(buildpp)(1) () () ()
+
+manpagename(buildpp) (A build system like make, but without makefiles)
+
+manpagesynopsis()
+bf(buildpp) [-clean] [-usecolours] [-verbose] [-girlie] [-test] targets
+
+manpagedescription(): the purpose of the program and such. This is also the place to document the workings.
+
+manpageoptions(): This is the place to document e.g. the flags that are stated in the manpagesynopsis(). This section is optional, but when present, must appear at this place.
+
+manpagefiles()
+bf(modulelist) contains a newline seperated list of pathes where the code files
+are stored. The pathes are searched recursivly.
+
+bf(localbuild.pl) Is read to dertermine the local build configuration,
+allowing to configure things that are specific for a build under a sertaint
+platform
+
+manpageseealso()
+bf(make) and all its freinds and relatives
+
+manpagediagnostics(): Error conditions, error messages, etc..
+
+manpagebugs(): This is where known bugs are described. This section is optional.
+
+manpageauthor()
+Aminova Vision Technology ApS (Visti Andresen (sftalpa at users.sourceforge.net))
