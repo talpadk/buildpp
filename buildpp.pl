@@ -41,45 +41,53 @@ my $doClean = 0;
 my $doBuild = 0;
 my $doTest = 0;
 my $testArguments = "";
+my @targets = ();
 
 #the localbuild.pl file may modify the variables below
 
-#a hash from regEx's for OS names to $target values
-my %osHash = ("linux", "linux");
+#A hash from regEx's for OS names to $target values
+my %osHash = ("linux", "linux", "cygwin", "windows");
 
 my $incDirs="-I. ";
 
-#display lots of information
-my $verbose = 0;
 
-#if true displays information that you normaly dont need nor want
-my $girlie = 0;
 
-#if true show when we rebuild .d files
-my $showDBuild = 0;
 
-#if true always show the command used for compilation (else just on error)
-my $showCompilerCommand = 0;
 
-#if true always show the command used for linking (else just on error)
-my $showLinkerCommand = 0;
 
-my $includeSuffix = "\\.h|\\.cpp";
-my $objectSuffix = "o";
-my $codeSuffix = "cpp";
-my $headerSuffix = "h";
-my $exeSuffix = "";
+#The current build target, empty for no specific target
 my $target = "";
+
+#The program to use as a compiler
 my $compiler = "g++";
+#The default flags used when compiling code into object files
+my $cflags = "-c -Wall ";
+#Defines the suffixes that if included with #include ""
+#will become part of the dependencies. Used in a regEx therefore
+#the weird syntax.
+my $includeSuffix = "\\.h|\\.cpp";
+#The suffix that your code files have, DON'T put a dot in front 
+my $codeSuffix = "cpp";
+#The suffix to put after object files, DON'T put a dot in front 
+my $objectSuffix = "o";
+
+#The program to use as a linker
 my $linker = "g++";
-my $cflags = "-c ";
+#The default flags used when linking object files together
 my $ldflags = "";
+#The suffix to put after executable files, DON'T put a dot in front 
+my $exeSuffix = "";
 
-#the dir where buildit generates files (.o .exe and .d files)
+#The dir where buildit generates files (.o .exe and .d files)
+#if it dos't exist it will be created. WARNING ALL files here
+#will be deleted on clean! 
 my $buildDir = "build/";
-my @targets = ();
 
-#colour definitions for different types of output
+#If true you are requested to confirm when cleaning
+my $cleanConfirm = 1;
+
+
+#Colour definitions for different types of output
 my $colourVerbose = "\033[33m";
 my $colourNormal = "\033[37;40m";
 my $colourError = "\033[33;41m";
@@ -88,12 +96,26 @@ my $colourExternal = "\033[36m";
 my $colourWarning = "\033[33m";
 my $colourGirlie = "\033[35m"; 
 
-#if false the colour entrys will not be used.
+#If false the colour entrys will not be used.
 my $useColours = 0;
 
-#if true you are requested to confirm when cleaning
-my $cleanConfirm = 1;
+#Displays lots of information if true.
+my $verbose = 0;
 
+#If true displays information that you normally dont need nor want.
+my $girlie = 0;
+
+#If true show when we rebuild .d files.
+my $showDBuild = 0;
+
+#If true always shows the command used for compilation (else just on error)
+my $showCompilerCommand = 0;
+
+#If true always shows the command used for linking (else just on error)
+my $showLinkerCommand = 0;
+
+#Tries to reads an extra file and parse its contents, it will only
+#generate a warning if it can't find it.
 sub readConfigFile
 {
     my ($filename) = @_;
@@ -112,6 +134,7 @@ sub readConfigFile
     eval $contents;
 }
 
+#Tries to determine the OS we are running under and sets $target accordingly
 sub autoTarget
 {
   my $targetFound = 0;

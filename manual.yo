@@ -10,7 +10,7 @@ The purpose of buildpp is to build source code into programs and librarys
 It is primarylie intended for C and C++ but it should be possible to use other 
 languages.
 It is intended to support building the application under different systems,
-currently windows and linux is tested, the requerment of the opperation system
+currently windows and linux is tested, the requirements of the operation-system
 are a "recent" version of perl and a compiler.
 
 manpageoptions()
@@ -45,6 +45,89 @@ are stored. The pathes are searched recursivly.
 bf(localbuild.pl) Is read to dertermine the local build configuration,
 allowing to configure things that are specific for a build under a sertaint
 platform.
+
+manpagesection(BUILDPP VARIABLES AND FUNCTIONS)
+Here is a list of the internal variables and functions of buildpp,
+that you may change
+in the localbuild.pl file or any file it includes with readConfigFile
+
+bf(readConfigFile("filename")) Tries to reads an extra file and parse its contents, it will only generate a warning if it can't find it.
+
+bf(autoTarget()) Tries to determine the OS we are running under and
+sets bf($target) accordingly.
+
+bf(%osHash) A hash from regEx's for OS names to $target values
+(DEFAULT=("linux", "linux", "cygwin", "windows"))
+
+bf($target) The current build target, empty for no specific target
+(DEFAULT="") bf(see CODE COMMENTS for more info).
+
+bf($compiler) The program to use as a compiler (DEFAULT="c++").
+
+bf($cflags) The default flags used when compiling code into object files
+(DEFAULT="-c -Wall ") see bf(CODE COMMENTS) for more info.
+
+bf($includeSuffix) Defines the suffixes that if included with
+#include "" will become part of the dependencies.
+Used in a regEx therefore the weird syntax
+(DEFAULT="\\.h|\\.cpp").
+
+bf($codeSuffix) The suffix that your code files have, DON'T put a dot
+in front (DEFAULT="cpp").
+
+bf($objectSuffix) The suffix to put after object files, DON'T put a
+dot in front (DEFAULT="o").
+
+bf($linker) The program to use as a linker (DEFAULT="c++")
+see bf(CODE COMMENTS) for more info.
+
+bf($ldflags) The default flags used when linking object files together
+(DEFAULT="") see bf(CODE COMMENTS) for more info.
+
+bf($exeSuffix) The suffix to put after executable files, DON'T put a
+dot in front (DEFAULT="").
+
+bf($buildDir) The dir where buildit generates files (.o .exe and .d files)
+if it dos't exist it will be created. WARNING ALL files here
+will be deleted on clean! (DEFAULT="build/").
+
+bf($cleanConfirm) If true you are requested to confirm when cleaning
+(DEFAULT=1).
+
+
+bf(DISPLAY CONTROLS)
+
+bf($colourVerbose),
+bf($colourNormal), 
+bf($colourError), 
+bf($colourAction), 
+bf($colourExternal), 
+bf($colourWarning), 
+bf($colourGirlie)
+Colour definitions for different types of output
+(DEFAULTS
+$colourVerbose = "\033[33m",
+$colourNormal = "\033[37;40m",
+$colourError = "\033[33;41m",
+$colourAction = "\033[32m",
+$colourExternal = "\033[36m"
+$colourWarning = "\033[33m",
+$colourGirlie = "\033[35m"
+)
+
+bf($useColours) If false the colour entrys will not be used, note
+that it is not all terminals that understands the colourcodes (DEFAULT=0). 
+
+bf($verbose) Displays lots of information if true (DEFAULT=0).
+
+bf($girlie) If true displays information that you normally don't
+need nor want (DEFAULT=0).
+
+bf($showCompilerCommand) If true always shows the command used for
+compilation (else just on error) (DEFAULT=0).
+
+bf($showLinkerCommand) If true always shows the command used for linking
+(else just on error) (DEFAULT=0).
 
 manpagebugs()
 No known bugs at this time.

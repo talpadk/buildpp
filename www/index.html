@@ -1,6 +1,11 @@
 <html>
 <head><title>BuildPP</title></head>
 <A href="http://sourceforge.net"> <IMG src="http://sourceforge.net/sflogo.php?group_id=92900&amp;type=5" width="210" height="62" border="0" alt="SourceForge.net Logo" /></A><br>
+<h1>News</h1>
+2004-03-15 Added an autoTarget function (works under linux(tested on Debian)
+and windows(most likely just Cygwin)) and a tiny test project demonstrating buildpp, also the manual has been updated.<br>
+2004-02-23 Web page created.
+
 <h1>Getting buildpp</h1>
 Until I get my act together you may download buildpp using CVS.<br>
 Use the following line in your shell to get buildpp.<br>
@@ -23,10 +28,11 @@ to somewhere in you path.<br>
 If you just type make it will additionally try to build the manual pages for buildpp,
 this requires yodl2man and yodl2html part of the <a href="http://www.xs4all.nl/~jantien/yodl/">yodl package</a>.
 Note: the manual pages are currently not installed as they are incomplete.<br>
+If you type <em>make test</em> instead of <em>make install</em> it will try
+to build a dummy program using buildpp, this additionally requires gcc<br>
 <h1>Tips</h1>
 Under Windows I strongly recommend using <a href="http://www.cygwin.com/">Cygwin</a> as it provides a Linux like
 environment, including perl and a decent shell. 
 And if you are developing non GPL things <a href="http://www.mingw.org/">MinGW</a> as the compiler, other compilers
 are usable as well, but MinGW is free.<br>
-<h1>News</h1>
-2004-02-23 Web page created.
+
