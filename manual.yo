@@ -7,10 +7,10 @@ bf(buildpp) [-clean] [-usecolours] [-verbose] [-girlie] [-test] targets
 manpagedescription()
 The purpose of buildpp is to build source code into programs and librarys
 (currently only programs are supported (tested)).
-It is primarylie intended for C and C++ but it should be possible to use other 
+It is primarily intended for C and C++ but it should be possible to use other 
 languages.
 It is intended to support building the application under different systems,
-currently windows and linux is tested, the requirements of the operation-system
+currently Windows, Linux and MacOSX is tested, the requirements of the operation-system
 are a "recent" version of perl and a compiler.
 
 manpageoptions()
@@ -70,7 +70,7 @@ bf(autoTarget()) Tries to determine the OS we are running under and
 sets bf($target) accordingly.
 
 bf(%osHash) A hash from regEx's for OS names to $target values
-(DEFAULT=("linux" => "linux", "cygwin" => "windows"))
+(DEFAULT=see buildpp.pl)
 
 bf($target) The current build target, empty for no specific target.
 Usually set using bf(autoTarget()).
@@ -135,9 +135,26 @@ has't been set it will
 be set to the number of hosts in the environment variable
 em(DISTCC_HOSTS)
 
-
 bf($numberOfThreads) The number of threads to use when compiling
 object files (DEFAULT=1)
+
+bf(CALLBACKS)
+
+bf($postProcessingRef) is a reference to a function that is called
+for each executable file created.
+This could for instance be used to call strip on your executables
+when generating release versions.
+See the default function in buildpp.pl for arguments.
+(DEFAULT=\&defaultPostProcessing)
+
+bf($autoProcessingRef) is a reference to a function that is called for 
+each file with a .auto suffix found during the first
+"em(Reading module list and compiling file list)"
+parse.
+The default behaviour is to try to execute the file
+See the default function in buildpp.pl for arguments.
+(DEFAULT=\&defaultAutoProcessing)
+
 
 bf(DISPLAY CONTROLS)
 
@@ -174,4 +191,4 @@ bf($showLinkerCommand) If true always shows the command used for linking
 (else just on error) (DEFAULT=0).
 
 manpageauthor()
-Aminova Vision Technology ApS  and Visti Andresen (sftalpa at users.sourceforge.net)
+Visti Andresen (sftalpa at users.sourceforge.net)

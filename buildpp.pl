@@ -74,6 +74,7 @@ my %rebuildExeFilesArguments:shared=();
 my @exeFiles:shared=();
 my $doClean:shared = 0;
 my $doBuild:shared = 0;
+my $buildFailed:shared = 0;
 my $doTest:shared = 0;
 my $testArguments:shared = "!¤/)=(Noonewritesthis!!IHope";
 my @targets:shared = ();
@@ -96,7 +97,7 @@ my $argumentsRead:shared = 0;
 
 
 #A hash from regEx's for OS names to $target values
-my %osHash:shared = ("linux" => "linux", "cygwin" => "windows");
+my %osHash:shared = ("linux" => "linux", "cygwin" => "windows", "darwin" => "macosx");
 
 my $incDirs:shared="-I. ";
 
@@ -179,6 +180,34 @@ my $showCompilerCommand:shared = 0;
 
 #If true always shows the command used for linking (else just on error)
 my $showLinkerCommand:shared = 0;
+
+
+#default sub for post processing.
+#1. argument = path + filename of executable to post process
+sub defaultPostProcessing
+{
+}
+my $postProcessingRef = \&defaultPostProcessing;
+
+my $rescanFiles = 0;
+
+#default action for .auto files
+#1. argument = path to .auto file
+#2. argument = filename of .auto file
+#3. argument = current path (you must return here at the end of the function
+#Set $rescanFiles = 1, if your auto process may gennerate new files.
+sub defaultAutoProcessing
+{
+  my $dirName = $_[0];
+  my $name = $_[1];
+  my $workingDir = $_[2];
+  
+  chdir($dirName);
+  print `./$name`;
+  chdir($workingDir);
+  $rescanFiles = 1;
+}
+my $autoProcessingRef = \&defaultAutoProcessing;
 
 #Sub to handle arguments
 sub handleArguments
@@ -308,9 +337,7 @@ sub findFilesInDir
         elsif ($_ =~ /\.auto$/){
           my $name = $_;
           print $colourExternal."Updating $name in $dirName$colourNormal\n";
-          chdir($dirName);
-          print `./$name`;
-          chdir($workingDir);
+          &$autoProcessingRef($dirName, $name, $workingDir);
         }
       }
     }
@@ -324,6 +351,7 @@ sub findFilesInDir
 #reads the modulelist file and generates the search tables for building
 sub readModuleList
 {
+  $incDirs="-I. ";
   print $colourAction."Reading module list and compiling file list$colourNormal\n";
   open (moduleList, "<modulelist")
     || die "Can't open modulelist";
@@ -647,13 +675,17 @@ sub buildObjectFile
   my $path = $fileMapping{$filename.".$codeSuffix"};
   
   $globalMutex->down;
+  if ($buildFailed){
+    $globalMutex->up;
+    return;
+  }
   my $progress = getProgressInfo();
   
   my $compilerCommand = $compiler;
   if ($useDistcc){
     $compilerCommand = "distcc $compiler";
   }
-  my $command = "$compilerCommand -o$buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
+  my $command = "$compilerCommand -o $buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
 
   print $colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
         "$filename.o$colourNormal\n";
@@ -670,11 +702,12 @@ sub buildObjectFile
     $globalMutex->down;
     print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
     if (!$showCompilerCommand){
+      $buildFailed = 1;
       print "$command\n";
     }
     $globalMutex->up;
     unlink($filename.".".$objectSuffix);
-      die $colourError."   Sorry   $colourNormal\n";
+    print $colourError."   Sorry   $colourNormal\n";
   }
   #invalidate object files timestamp cache
   $globalMutex->down;
@@ -765,7 +798,7 @@ sub buildExeFile
   if ($outputDir eq ""){
     $outputDir = $buildDir;
   }
-  my $command = "$linker -o$outputDir$filename$exeSuffix $arguments";
+  my $command = "$linker -o $outputDir$filename$exeSuffix $arguments";
   
   print $colourAction."Linking $filename$exeSuffix$colourNormal\n";
   
@@ -781,7 +814,8 @@ sub buildExeFile
     unlink($filename.$exeSuffix);
       die $colourError."   Sorry   $colourNormal\n";
   }
-  $timeStamps{$buildDir.$filename."$exeSuffix"} = -2;
+  &$postProcessingRef($outputDir.$filename."$exeSuffix");
+  $timeStamps{$outputDir.$filename."$exeSuffix"} = -2;
 }
 
 #finds the files requered for an exe file, from a file path without suffix
@@ -940,6 +974,10 @@ sub buildFiles
     $thread->join;
   }
   
+  if ($buildFailed){
+    die $colourError."   There were errors!!!   $colourNormal\n";
+  }
+  
   scanForRebuildFiles();
   print $colourAction."Linking files$colourNormal\n";
   for my $file (keys %rebuildExeFiles){
@@ -999,7 +1037,10 @@ if (!$useColours){
 }
 
 readModuleList();
-
+if ($rescanFiles){
+  %fileMapping=();
+  readModuleList();
+}
 #removes ALL files from a directory, use with extreme care!
 #first arg is the path of the dir
 sub purgeDir
