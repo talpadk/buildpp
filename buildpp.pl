@@ -80,7 +80,7 @@ my $argumentsRead = 0;
 
 
 #A hash from regEx's for OS names to $target values
-my %osHash = ("linux", "linux", "cygwin", "windows");
+my %osHash = ("linux" => "linux", "cygwin" => "windows");
 
 my $incDirs="-I. ";
 
@@ -159,6 +159,7 @@ sub handleArguments
 {
   if (!$argumentsRead){
     my $argument = $_[0];
+	  $argument =~ s/^.*\/([^\/]+)$/$1/e;
     push(@targets, $argument);
   }
 }
@@ -169,7 +170,7 @@ my %argumentHash =
 (
 "<>" => \&handleArguments,
 "clean" => \$doClean,
-"usecolours|usecolors!" => \$useColours,
+"usecolours|usecolors|c!" => \$useColours,
 "verbose|v!" => \$verbose,
 "girlie!" => \$girlie,
 "showdbuild!" => \$showDBuild,

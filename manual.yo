@@ -21,11 +21,11 @@ directory! The build directory is specified with em($buildDir) it defaults to
 "em(build/)". If em($cleanConfirm) is true buildpp will request you to confirm
 the clean action, the default is em(1) (true).
 
-dit(bf(-usecolours)) Overwrites em($useColours) and sets it true.
+dit(bf(-usecolours or -usecolors or -c)) Overwrites em($useColours) and sets it true.
 Buildpp will colourize the output if em($useColours) is true,
 the default is em(0) (false).
 
-dit(bf(-verbose)) Overwrites em($verbose) and sets it true.
+dit(bf(-verbose or -v)) Overwrites em($verbose) and sets it true.
 Buildpp will output extra information if em($verbose) is true,
 the default is em(0) (false).
 
@@ -33,9 +33,9 @@ dit(bf(-girlie)) Overwrites em($girlie) and sets it true.
 Buildpp will tell you things you probably don't want to know if em($girlie)
 is true, the default is em(0) (false).
 
-dit(bf(-test)) Test the target after building it (it must be executable or
+dit(bf(-test or -t)) Test the target after building it (it must be executable or
 buildpp will look for its file in vane, complaining about it). If you specify
-something like em("-test Hello World") Hello World will be given on the
+something like em(-test="Hello World") Hello World will be given on the
 commandline to the target.
 enddit()
 manpagefiles()
@@ -45,29 +45,49 @@ are stored. The pathes are searched recursivly.
 bf(localbuild.pl) Is read to dertermine the local build configuration,
 allowing to configure things that are specific for a build under a sertaint
 platform.
+The file is read using bf(readConfigFile)
 
 manpagesection(BUILDPP VARIABLES AND FUNCTIONS)
-Here is a list of the internal variables and functions of buildpp,
+Here is a list of the internal variables and functions of buildpp
 that you may change
 in the localbuild.pl file or any file it includes with readConfigFile
 
-bf(readConfigFile("filename")) Tries to reads an extra file and parse its contents, it will only generate a warning if it can't find it.
+bf(readConfigFile("filename")) Tries to reads an extra file and parse its contents,
+it will only generate a warning if it can't find it.
+However if the file fails to parse, buildpp stops.
 
 bf(autoTarget()) Tries to determine the OS we are running under and
 sets bf($target) accordingly.
 
 bf(%osHash) A hash from regEx's for OS names to $target values
-(DEFAULT=("linux", "linux", "cygwin", "windows"))
+(DEFAULT=("linux" => "linux", "cygwin" => "windows"))
 
-bf($target) The current build target, empty for no specific target
+bf($target) The current build target, empty for no specific target.
+Usually set using bf(autoTarget()).
 (DEFAULT="") bf(see CODE COMMENTS for more info).
+
+bf(parseArguments()) Makes buildpp.pl read the arguments and options from the 
+command line. buildpp.pl will call this if you don't. However it won't call it
+if you have already called it. It is possible to call this function more that once
+if needed. You only need to call this function if you modify bf(%argumentHash). 
+
+bf(%argumentHash) The option that is feed to Getopt::Long when reading options.
+Modify this to define your own options for buildpp.pl.
+eg. em($argumentHash{"cross"} = \$crossCompile;) to define a new option -cross that sets
+$crossCompile true when you call bf(parseArguments()).
+See the perl documentation for Getopt::Long for more information (DEFAULT=see buildpp.pl)
+
+bf($testProgram) The program used when testing exe files. You could set this to "wine " when
+cross compiling to windows or "gdb " when compiling debug versions (DEFAULT="").
+
+bf(COMPILING AND LINKING VARIABLES)
 
 bf($lazyLinking) if lazyLinking is set true (1) you don't need to specify
 link comments it links with everything that you #include "" with.
 Inside the source code you may locally overwrite the global $lazyLinking variable
 with bf(//#lazylinking on) or bf(//#lazylinking off) (DEFAULT=0).
 
-bf($compiler) The program to use as a compiler (DEFAULT="c++").
+bf($compiler) The program to use as a compiler (DEFAULT="g++").
 
 bf($cflags) The default flags used when compiling code into object files
 (DEFAULT="-c -Wall ") see bf(CODE COMMENTS) for more info.
@@ -83,7 +103,7 @@ in front (DEFAULT="cpp").
 bf($objectSuffix) The suffix to put after object files, DON'T put a
 dot in front (DEFAULT="o").
 
-bf($linker) The program to use as a linker (DEFAULT="c++")
+bf($linker) The program to use as a linker (DEFAULT="g++")
 see bf(CODE COMMENTS) for more info.
 
 bf($ldflags) The default flags used when linking object files together
@@ -120,7 +140,7 @@ $colourWarning = "\033[33m",
 $colourGirlie = "\033[35m"
 )
 
-bf($useColours) If false the colour entrys will not be used, note
+bf($useColours) See bf(-usecolours). If false the colour entrys will not be used, note
 that it is not all terminals that understands the colourcodes (DEFAULT=0). 
 
 bf($verbose) Displays lots of information if true (DEFAULT=0).
