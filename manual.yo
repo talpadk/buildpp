@@ -62,6 +62,11 @@ bf(%osHash) A hash from regEx's for OS names to $target values
 bf($target) The current build target, empty for no specific target
 (DEFAULT="") bf(see CODE COMMENTS for more info).
 
+bf($lazyLinking) if lazyLinking is set true (1) you don't need to specify
+link comments it links with everything that you #include "" with.
+Inside the source code you may locally overwrite the global $lazyLinking variable
+with bf(//#lazylinking on) or bf(//#lazylinking off) (DEFAULT=0).
+
 bf($compiler) The program to use as a compiler (DEFAULT="c++").
 
 bf($cflags) The default flags used when compiling code into object files

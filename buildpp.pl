@@ -76,6 +76,9 @@ my $incDirs="-I. ";
 #The current build target, empty for no specific target
 my $target = "";
 
+#Use lazy linking or not
+my $lazyLinking = 0;
+
 #The program to use as a compiler
 my $compiler = "g++";
 #The default flags used when compiling code into object files
@@ -136,10 +139,10 @@ my $showLinkerCommand = 0;
 #generate a warning if it can't find it.
 sub readConfigFile
 {
-    my ($filename) = @_;
-    my $contents = "";
-    my $config;
-    if (open ($config, "$filename")) {
+  my ($filename) = @_;
+  my $contents = "";
+  my $config;
+  if (open ($config, "$filename")) {
 	print "reading $filename\n";
 	while (<$config>) {
 	    $contents .= $_;
@@ -150,6 +153,10 @@ sub readConfigFile
 	print "Warning: unable to open $filename\n";
     }
     eval $contents;
+    
+    if (!($@ eq "")){
+      die $@;
+    }
 }
 
 #Tries to determine the OS we are running under and sets $target accordingly
@@ -360,20 +367,36 @@ sub parseFile
   my $file;
   my @includeList=();
   my $currentTarget = "all";
+  my $currentLazyLinking = $lazyLinking;
 
   open ($file, "<$filePath") 
 		|| die "Unexpected error unable to read $filePath";
 
   while (<$file>){
     my $line = $_;  
-    if ($line =~ /\/\/\/\#target\s+(\S+)/){
+    if ($line =~ /\/{2,3}\#target\s+(\S+)/){
       $currentTarget = $1;
     }
-    if ($currentTarget eq "all" or $target eq $currentTarget){
-      if ($line =~ /(\#include\s*\"\s*\S+\s*\")/){
-        push (@includeList, $1);
+    if ($line =~ /\/{2,3}#lazylinking\s+(\S+)/){
+      my $arg = $1;
+      if ($arg =~ /off/i){
+        $currentLazyLinking = 0;
       }
-      if ($line =~ /\/\/\/(\#\S+\s?\S*)\s*/){
+      if ($arg =~ /on/i){
+        $currentLazyLinking = 1;
+      }
+    }
+    if ($currentTarget eq "all" or $target eq $currentTarget){
+      if ($line =~ /(\#include\s*\"\s*)(\S+)(\s*\")/){
+        push (@includeList, $1.$2.$3);
+        if ($currentLazyLinking){
+          my $linkName = $2;
+          #remove suffix
+          $linkName =~ s/\.[^\.]+$//;
+          push (@includeList, "\#link $linkName");
+        }
+      }
+      if ($line =~ /\/{2,3}(\#\S+\s?\S*)\s*/){
         push (@includeList, ($1));
       }
     } 
