@@ -36,6 +36,24 @@ my %timeStamps=();
 #a hash used to remember files pased for this run, also speeds up parsing
 my %recurivePassedFiles=();
 
+#a hash from files to modificaion times, for the O files that needs to be
+#rebuild this run.
+my %rebuildOFiles=();
+#a has from filenames to compiler arguments for O files
+my %rebuildOFilesArguments=();
+#The O file currently being build
+my $currentOFileNumber = 1;
+#the total number of O files needing to be build
+my $numberOfOFiles = -1;
+#The time we started to compile files
+my $compileStartTime = 0;
+
+#a hash from files to modificaion times, for the exe files that needs to be
+#rebuild this run.
+my %rebuildExeFiles=();
+#a has from filenames to linker arguments for exefiles
+my %rebuildExeFilesArguments=();
+
 my @exeFiles=();
 my $doClean = 0;
 my $doBuild = 0;
@@ -520,9 +538,69 @@ sub parseFileCached{
 
 
 
+
+
+#returns a string containing progress infor (only valid when compiling O files)
+sub getProgressInfo
+{
+  my $timePassed = time()-$compileStartTime;
+  my $result;
+  if ($currentOFileNumber == 1){
+    $result = "(0%"
+  }
+  else {
+    my $progress = ($currentOFileNumber-1)*100/$numberOfOFiles;
+    my $timeString;
+    if (!($progress==0)){
+      my $timeLeft = ($timePassed/($progress/100)-$timePassed);
+      $timeLeft = int $timeLeft;
+      if ($timeLeft > 60){
+        my $minutes = int ($timeLeft/60);
+        $timeString.=$minutes."m ";
+        $timeLeft -= $minutes*60;
+      }
+      $timeString.=$timeLeft."s";
+    }
+    $progress = int ($progress);
+    $result = "($progress% $timeString";
+  }
+  $result.=")";
+  return $result;
+}
+
+#builds an object file
+#first argument is the file without a path and without suffix
+sub buildObjectFile
+{
+  my $filename = $_[0];  
+    
+  my $comileArguments = $rebuildOFilesArguments{$filename};
+  my $path = $fileMapping{$filename.".$codeSuffix"};
+  
+  my $progress = getProgressInfo();
+  my $command = "$compiler -o$buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
+  print $colourAction."$currentOFileNumber/$numberOfOFiles Compiling ".
+        "$filename.o           $progress$colourNormal\n";
+  
+  if ($showCompilerCommand == 1){
+      print "$command\n";
+  }
+  `$command`;
+  if ($? != 0) {
+    print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
+    if (!$showCompilerCommand){
+      print "$command\n";
+    }
+    unlink($filename.".".$objectSuffix);
+      die $colourError."   Sorry   $colourNormal\n";
+  }
+  $timeStamps{$buildDir.$filename.".$objectSuffix"} = -2;
+  $currentOFileNumber++;
+}
+
 #builds an object file
 #first argument is the code file to use l
-sub generateObjectFile
+sub findObjectFiles
 {
   my $filename = $_[0];
 
@@ -587,31 +665,44 @@ sub generateObjectFile
       }
     }
 
-    my $command = "$compiler -o$buildDir$filename.$objectSuffix $myCFlags $incDirs $path$filename.$codeSuffix";
-    print $colourAction."Compiling $filename.o$colourNormal\n";
-    
-    if ($showCompilerCommand == 1){
-        print "$command\n";
-    }
-    `$command`;
-    if ($? != 0) {
-      print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
-      if (!$showCompilerCommand){
-        print "$command\n";
-      }
-      unlink($filename.".".$objectSuffix);
-        die $colourError."   Sorry   $colourNormal\n";
-    }
-    $timeStamps{$buildDir.$filename.".$objectSuffix"} = -2;
+    $rebuildOFiles{$filename}=0;
+    $rebuildOFilesArguments{$filename}="$myCFlags $incDirs";
+    #buildObjectFile($filename);
   }
 }
 
-#gennerates an exe file from a path without suffix
-sub generateExeFile
+#builds an exe file
+#first argument is the file without a path and without suffix
+sub buildExeFile
+{
+  my $filename = $_[0];
+  my $arguments = $rebuildExeFilesArguments{$filename};
+
+  my $command = "$linker -o$buildDir$filename$exeSuffix $arguments";
+  
+  print $colourAction."Linking $filename$exeSuffix$colourNormal\n";
+  
+  if ($showLinkerCommand == 1){
+    print "$command\n";
+  }
+  `$command`;
+  if ($? != 0) {
+    print $colourError."Linking of $filename$exeSuffix failed$colourNormal\n";
+    if (!$showLinkerCommand){
+      print "$command\n";
+    }
+    unlink($filename.$exeSuffix);
+      die $colourError."   Sorry   $colourNormal\n";
+  }
+  $timeStamps{$buildDir.$filename."$exeSuffix"} = -2;
+}
+
+#finds the files requered for an exe file, from a file path without suffix
+sub findExeFiles
 {
   my $filename = $_[0];
 
-  generateObjectFile($filename);
+  findObjectFiles($filename);
 
   my $exeTime = getTime($buildDir.$filename."$exeSuffix");
   my $objTime = getTime($buildDir.$filename.".$objectSuffix");
@@ -642,7 +733,7 @@ sub generateExeFile
       my $objFile = $oFile.".$objectSuffix";
       if (!exists($linkMap{$objFile})){
         $linkMap{$objFile}=" ";
-        generateObjectFile($oFile);
+        findObjectFiles($oFile);
         $objTime = getTime($buildDir.$objFile);
         if ($exeTime <= $objTime){
           $needsRebuild = 1;
@@ -663,23 +754,9 @@ sub generateExeFile
   }
 
   if ($needsRebuild and $isExe){
-    my $command = "$linker -o$buildDir$filename$exeSuffix $linkLine $myLdFlags";
-    
-    print $colourAction."Linking $filename$exeSuffix$colourNormal\n";
-    
-    if ($showLinkerCommand == 1){
-      print "$command\n";
-    }
-    `$command`;
-    if ($? != 0) {
-      print $colourError."Linking of $filename$exeSuffix failed$colourNormal\n";
-      if (!$showLinkerCommand){
-        print "$command\n";
-      }
-      unlink($filename.$exeSuffix);
-        die $colourError."   Sorry   $colourNormal\n";
-    }
-    $timeStamps{$buildDir.$filename."$exeSuffix"} = -2;
+    $rebuildExeFilesArguments{$filename}=" $linkLine $myLdFlags";
+    $rebuildExeFiles{$filename}=-1;
+    #buildExeFile($filename);
   }
 }
     
@@ -698,15 +775,36 @@ sub buildDirTest
 sub buildFiles
 {
   buildDirTest();
-  print $colourAction."Building files$colourNormal\n";
+  print $colourAction."Finding files needing to be rebuild$colourNormal\n";
   my $match = makeMatchString();
   foreach(keys(%fileMapping)){
     if ($_ =~ /^($match)$/){
       my $theFile = $_;
       $theFile =~ s/\.$codeSuffix$//;
-      generateExeFile($theFile);
+      findExeFiles($theFile);
     }
   }
+
+  foreach (keys %rebuildOFiles){
+    my $file=$_;
+    my $path = $fileMapping{"$file.$codeSuffix"};
+    $rebuildOFiles{$file}=getTime("$path$file.$codeSuffix");
+  }
+  
+  print $colourAction."Building files$colourNormal\n";
+  my @sorted;
+  @sorted = sort {$rebuildOFiles{$b} cmp  $rebuildOFiles{$a}}keys%rebuildOFiles;
+  $numberOfOFiles=$#sorted+1;
+  $compileStartTime = time();
+  for my $file (@sorted){
+    buildObjectFile($file);
+  }
+  
+  print $colourAction."Linking files$colourNormal\n";
+  for my $file (keys %rebuildExeFiles){
+    buildExeFile($file);
+  }
+
 }
 
 sub testFiles
