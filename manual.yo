@@ -4,25 +4,50 @@ manpagename(buildpp) (A build system like make, but without makefiles)
 
 manpagesynopsis()
 bf(buildpp) [-clean] [-usecolours] [-verbose] [-girlie] [-test] targets
+manpagedescription()
+The purpose of buildpp is to build source code into programs and librarys
+(currently only programs are supported (tested)).
+It is primarylie intended for C and C++ but it should be possible to use other 
+languages.
+It is intended to support building the application under different systems,
+currently windows and linux is tested, the requerment of the opperation system
+are a "recent" version of perl and a compiler.
 
-manpagedescription(): the purpose of the program and such. This is also the place to document the workings.
+manpageoptions()
+startdit()
+dit(bf(-clean)) Removes all files in the build directory, all files will be 
+remove without regard to whom made them. NEVER put any files in the build 
+directory! The build directory is specified with em($buildDir) it defaults to
+"em(build/)". If em($cleanConfirm) is true buildpp will request you to confirm
+the clean action, the default is em(1) (true).
 
-manpageoptions(): This is the place to document e.g. the flags that are stated in the manpagesynopsis(). This section is optional, but when present, must appear at this place.
+dit(bf(-usecolours)) Overwrites em($useColours) and sets it true.
+Buildpp will colourize the output if em($useColours) is true,
+the default is em(0) (false).
 
+dit(bf(-verbose)) Overwrites em($verbose) and sets it true.
+Buildpp will output extra information if em($verbose) is true,
+the default is em(0) (false).
+
+dit(bf(-girlie)) Overwrites em($girlie) and sets it true.
+Buildpp will tell you things you probably don't want to know if em($girlie)
+is true, the default is em(0) (false).
+
+dit(bf(-test)) Test the target after building it (it must be executable or
+buildpp will look for its file in vane, complaining about it). If you specify
+something like em("-test Hello World") Hello World will be given on the
+commandline to the target.
+enddit()
 manpagefiles()
 bf(modulelist) contains a newline seperated list of pathes where the code files
 are stored. The pathes are searched recursivly.
 
 bf(localbuild.pl) Is read to dertermine the local build configuration,
 allowing to configure things that are specific for a build under a sertaint
-platform
+platform. It is preferable to 
 
-manpageseealso()
-bf(make) and all its freinds and relatives
-
-manpagediagnostics(): Error conditions, error messages, etc..
-
-manpagebugs(): This is where known bugs are described. This section is optional.
+manpagebugs()
+No known bugs at this time.
 
 manpageauthor()
-Aminova Vision Technology ApS (Visti Andresen (sftalpa at users.sourceforge.net))
+Aminova Vision Technology ApS  and Visti Andresen (sftalpa at users.sourceforge.net)
