@@ -771,11 +771,9 @@ sub buildDirTest
   }
 }
 
-#builds the files requested
-sub buildFiles
+#tries to find the files that needs rebuild
+sub scanForRebuildFiles
 {
-  buildDirTest();
-  print $colourAction."Finding files needing to be rebuild$colourNormal\n";
   my $match = makeMatchString();
   foreach(keys(%fileMapping)){
     if ($_ =~ /^($match)$/){
@@ -785,6 +783,15 @@ sub buildFiles
     }
   }
 
+}
+
+#builds the files requested
+sub buildFiles
+{
+  buildDirTest();
+  print $colourAction."Finding files needing to be rebuild$colourNormal\n";
+
+  scanForRebuildFiles();
   foreach (keys %rebuildOFiles){
     my $file=$_;
     my $path = $fileMapping{"$file.$codeSuffix"};
@@ -800,6 +807,7 @@ sub buildFiles
     buildObjectFile($file);
   }
   
+  scanForRebuildFiles();
   print $colourAction."Linking files$colourNormal\n";
   for my $file (keys %rebuildExeFiles){
     buildExeFile($file);
