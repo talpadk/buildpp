@@ -28,6 +28,10 @@ showhtml: buildpp.html
 install:
 	cp buildpp.pl /usr/bin/
 
+.PHONY: test
+test:
+	./buildpp.pl
+
 .PHONY: webupdate
 webupdate: buildpp.html
 	cp buildpp.html www/

@@ -37,12 +37,17 @@ my %timeStamps=();
 my %recurivePassedFiles=();
 
 my @exeFiles=();
-my $incDirs="-I. ";
-
 my $doClean = 0;
 my $doBuild = 0;
 my $doTest = 0;
 my $testArguments = "";
+
+#the localbuild.pl file may modify the variables below
+
+#a hash from regEx's for OS names to $target values
+my %osHash = ("linux", "linux");
+
+my $incDirs="-I. ";
 
 #display lots of information
 my $verbose = 0;
@@ -105,6 +110,27 @@ sub readConfigFile
 	print "Warning: unable to open $filename\n";
     }
     eval $contents;
+}
+
+sub autoTarget
+{
+  my $targetFound = 0;
+  my $osMatch;
+  my $osString;
+  my $osName = $^O;  
+  while (($osMatch, $osString) = each %osHash){
+    if ($osName =~ /$osMatch/){
+      $targetFound = 1;
+      $target = $osString;
+      last;
+    }
+  }
+  
+  
+  if ($targetFound==0){
+    print "WARNING: autoTarget failed to acquire a target for '$osName'\n";
+    print "Try fixing %osHash or switch to manual targeting\n"
+  }
 }
 
 readConfigFile("localbuild.pl");
