@@ -18,6 +18,7 @@
 use strict;
 use Fcntl ':mode';
 use Cwd;
+use Getopt::Long;
 
 my $workingDir = &Cwd::cwd();
 
@@ -58,10 +59,25 @@ my @exeFiles=();
 my $doClean = 0;
 my $doBuild = 0;
 my $doTest = 0;
-my $testArguments = "";
+my $testArguments = "!¤/)=(Noonewritesthis!!IHope";
 my @targets = ();
 
-#the localbuild.pl file may modify the variables below
+#set to true when options and arguments are read
+my $argumentsRead = 0;
+
+#
+#
+#
+#
+#
+# The localbuild.pl file may modify the variables below
+#          (those it makes sense to change)
+#
+#
+#
+#
+#
+
 
 #A hash from regEx's for OS names to $target values
 my %osHash = ("linux", "linux", "cygwin", "windows");
@@ -98,6 +114,9 @@ my $linker = "g++";
 my $ldflags = "";
 #The suffix to put after executable files, DON'T put a dot in front 
 my $exeSuffix = "";
+#The program used to test the exe, this could be "gdb " or "wine " if you are 
+#xcompiling to windows. It's just put in front so remember a trailing space
+my $testProgram = "";
 
 #The dir where buildit generates files (.o .exe and .d files)
 #if it dos't exist it will be created. WARNING ALL files here
@@ -134,6 +153,29 @@ my $showCompilerCommand = 0;
 
 #If true always shows the command used for linking (else just on error)
 my $showLinkerCommand = 0;
+
+#Sub to handle arguments
+sub handleArguments
+{
+  if (!$argumentsRead){
+    my $argument = $_[0];
+    push(@targets, $argument);
+  }
+}
+
+
+#The hash of arguments for use with GetOptions
+my %argumentHash = 
+(
+"<>" => \&handleArguments,
+"clean" => \$doClean,
+"usecolours|usecolors!" => \$useColours,
+"verbose|v!" => \$verbose,
+"girlie!" => \$girlie,
+"showdbuild!" => \$showDBuild,
+"test|t:s" => \$testArguments
+);
+
 
 #Tries to reads an extra file and parse its contents, it will only
 #generate a warning if it can't find it.
@@ -179,6 +221,20 @@ sub autoTarget
     print "WARNING: autoTarget failed to acquire a target for '$osName'\n";
     print "Try fixing %osHash or switch to manual targeting\n"
   }
+}
+
+
+#reads the commandline arguments
+sub parseArguments
+{
+  GetOptions(%argumentHash);
+  if (scalar(@targets) != 0 || ($doClean == 0)){
+	  $doBuild = 1;
+  }
+  if (!($testArguments eq "!¤/)=(Noonewritesthis!!IHope")){
+    $doTest = 1;
+  }
+  $argumentsRead = 1;
 }
 
 readConfigFile("localbuild.pl");
@@ -251,45 +307,6 @@ sub readModuleList
   close moduleList;
 }
 
-#reads the commandline arguments
-sub parseArguments
-{
-    foreach(@ARGV){
-	if ($_ eq "-clean"){
-	    $doClean = 1;
-	}
-  elsif ($_ eq "-verbose"){
-    $verbose = 1;
-  }
-  elsif ($_ eq "-girlie"){
-    $girlie = 1;
-  }
-elsif ($_ eq "-showdbuild"){
-    $showDBuild = 1;
-  }  
-  elsif ($_ eq "-usecolours" or $_ eq "-usecolors"){
-    $useColours = 1;
-  }
-	elsif ($_ =~ /^-test(.*)/){
-	    $testArguments = $1;
-	    $doTest = 1;
-	}
-	else {
-	    my $argument = $_;
-	    $argument =~ s/^.*\///;
-	    #if (exists($fileMapping{$argument.".$codeSuffix"})){
-		push(@targets, $argument);
-	    #}
-	    #else{
-		#die "You are trying to build '$_' but I don't know ".
-		 #   "anything about that component\n";
-	   # }
-	}
-    }
-    if (scalar(@targets) != 0 || ($doClean == 0)){
-	$doBuild = 1;
-    }
-}
 
 #generates a string that can be used to search the filelist for files that
 #the user has requested a build of
@@ -843,13 +860,15 @@ sub testFiles
 {
     for my $file (@targets){
       print $colourAction."Testing $file$colourNormal\n";
-      print `$buildDir$file $testArguments`;
+      print `$testProgram$buildDir$file $testArguments`;
     } 
 }
 
 $ENV{"target"}=$target;
 
-parseArguments();
+if (!$argumentsRead){
+  parseArguments();
+}
 
 if (!$useColours){
   $colourVerbose = "";
