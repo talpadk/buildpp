@@ -19,11 +19,27 @@ use strict;
 use Fcntl ':mode';
 use Cwd;
 use Getopt::Long;
+use threads;
+use threads::shared;
+use Thread::Semaphore;
 
-my $workingDir = &Cwd::cwd();
+#mutex for all variables
+my $globalMutex = Thread::Semaphore->new(1);
+
+#an array of all builder threads
+my @threads= ();
+
+#the number of the next job to build
+my $nextBuildJob:shared = 0;
+
+#an array of build jobs, sorted by importance
+my @sortedBuildJobs:shared = ();
+
+
+my $workingDir:shared = &Cwd::cwd();
 
 #a mapping to find the path of a file
-my %fileMapping=();
+my %fileMapping:shared=();
 
 #a cache of level 1 dependencies
 my %deps=();
@@ -32,38 +48,38 @@ my %deps=();
 my %depCache=();
 
 #a cache of file times -1 = file dos't exist, -2 = cache entry invalid
-my %timeStamps=();
+my %timeStamps:shared=();
 
 #a hash used to remember files pased for this run, also speeds up parsing
-my %recurivePassedFiles=();
+my %recurivePassedFiles:shared=();
 
 #a hash from files to modificaion times, for the O files that needs to be
 #rebuild this run.
-my %rebuildOFiles=();
+my %rebuildOFiles:shared=();
 #a has from filenames to compiler arguments for O files
-my %rebuildOFilesArguments=();
+my %rebuildOFilesArguments:shared=();
 #The O file currently being build
-my $currentOFileNumber = 1;
+my $currentOFileNumber:shared = 1;
 #the total number of O files needing to be build
-my $numberOfOFiles = -1;
+my $numberOfOFiles:shared = -1;
 #The time we started to compile files
-my $compileStartTime = 0;
+my $compileStartTime:shared = 0;
 
 #a hash from files to modificaion times, for the exe files that needs to be
 #rebuild this run.
-my %rebuildExeFiles=();
+my %rebuildExeFiles:shared=();
 #a has from filenames to linker arguments for exefiles
-my %rebuildExeFilesArguments=();
+my %rebuildExeFilesArguments:shared=();
 
-my @exeFiles=();
-my $doClean = 0;
-my $doBuild = 0;
-my $doTest = 0;
-my $testArguments = "!¤/)=(Noonewritesthis!!IHope";
-my @targets = ();
+my @exeFiles:shared=();
+my $doClean:shared = 0;
+my $doBuild:shared = 0;
+my $doTest:shared = 0;
+my $testArguments:shared = "!¤/)=(Noonewritesthis!!IHope";
+my @targets:shared = ();
 
 #set to true when options and arguments are read
-my $argumentsRead = 0;
+my $argumentsRead:shared = 0;
 
 #
 #
@@ -80,85 +96,89 @@ my $argumentsRead = 0;
 
 
 #A hash from regEx's for OS names to $target values
-my %osHash = ("linux" => "linux", "cygwin" => "windows");
+my %osHash:shared = ("linux" => "linux", "cygwin" => "windows");
 
-my $incDirs="-I. ";
-
-
+my $incDirs:shared="-I. ";
 
 
+
+#the number of threats to use for compiling
+my $numberOfThreads:shared = 0;
 
 
 #The current build target, empty for no specific target
-my $target = "";
+my $target:shared = "";
 
 #Use lazy linking or not
-my $lazyLinking = 0;
+my $lazyLinking:shared = 0;
+
+#Use distcc for compileing?
+my $useDistcc:shared = 0;
 
 #The program to use as a compiler
-my $compiler = "g++";
+my $compiler:shared = "g++";
 #The default flags used when compiling code into object files
-my $cflags = "-c -Wall ";
+my $cflags:shared = "-c -Wall ";
 #Defines the suffixes that if included with #include ""
 #will become part of the dependencies. Used in a regEx therefore
 #the weird syntax.
-my $includeSuffix = "\\.h|\\.cpp";
+my $includeSuffix:shared = "\\.h|\\.cpp";
 #The suffix that your code files have, DON'T put a dot in front 
-my $codeSuffix = "cpp";
+my $codeSuffix:shared = "cpp";
 #The suffix to put after object files, DON'T put a dot in front 
-my $objectSuffix = "o";
+my $objectSuffix:shared = "o";
 
 #The program to use as a linker
-my $linker = "g++";
+my $linker:shared = "g++";
 #The default flags used when linking object files together
-my $ldflags = "";
+my $ldflags:shared = "";
 #The suffix to put after executable files, DON'T put a dot in front 
-my $exeSuffix = "";
+my $exeSuffix:shared = "";
 #The program used to test the exe, this could be "gdb " or "wine " if you are 
 #xcompiling to windows. It's just put in front so remember a trailing space
-my $testProgram = "";
+my $testProgram:shared = "";
 
 #The dir where buildpp generates files (.o and .d files)
 #if it dos't exist it will be created. WARNING ALL files here
 #will be deleted on clean! 
-my $buildDir = "build/";
+my $buildDir:shared = "build/";
 
 #The dir where buildpp generates output files (.exe files)
 #if it dos't exist it will be created. WARNING ALL files here
 #will be deleted on clean! 
 #If $outputDir is left empty the value of $buildDir will be used instead
-my $outputDir = "";
+my $outputDir:shared = "";
 
 #If true you are requested to confirm when cleaning
-my $cleanConfirm = 1;
+my $cleanConfirm:shared = 1;
 
 
 #Colour definitions for different types of output
-my $colourVerbose = "\033[33m";
-my $colourNormal = "\033[37;40m";
-my $colourError = "\033[33;41m";
-my $colourAction = "\033[32m";
-my $colourExternal = "\033[36m";
-my $colourWarning = "\033[33m";
-my $colourGirlie = "\033[35m"; 
+my $colourVerbose:shared = "\033[33m";
+my $colourNormal:shared = "\033[37;40m";
+my $colourError:shared = "\033[33;41m";
+my $colourAction:shared = "\033[32m";
+my $colourExternal:shared = "\033[36m";
+my $colourWarning:shared = "\033[33m";
+my $colourGirlie:shared = "\033[35m"; 
 
 #If false the colour entrys will not be used.
-my $useColours = 0;
+my $useColours:shared = 0;
 
 #Displays lots of information if true.
-my $verbose = 0;
+my $verbose:shared = 0;
 
 #If true displays information that you normally dont need nor want.
-my $girlie = 0;
+my $girlie:shared = 0;
 
 #If true show when we rebuild .d files.
-my $showDBuild = 0;
+my $showDBuild:shared = 0;
 
 #If true always shows the command used for compilation (else just on error)
-my $showCompilerCommand = 0;
+my $showCompilerCommand:shared = 0;
 
 #If true always shows the command used for linking (else just on error)
-my $showLinkerCommand = 0;
+my $showLinkerCommand:shared = 0;
 
 #Sub to handle arguments
 sub handleArguments
@@ -180,7 +200,9 @@ my %argumentHash =
 "verbose|v!" => \$verbose,
 "girlie!" => \$girlie,
 "showdbuild!" => \$showDBuild,
-"test|t:s" => \$testArguments
+"test:s" => \$testArguments,
+"j=i" => \$numberOfThreads,
+"distcc" => \$useDistcc
 );
 
 
@@ -587,7 +609,7 @@ sub parseFileCached{
 
 
 
-#returns a string containing progress infor (only valid when compiling O files)
+#returns a string containing progress infor (only valid when compiling O files) !!! THREAD WARNING !!!
 sub getProgressInfo
 {
   my $timePassed = time()-$compileStartTime;
@@ -615,7 +637,7 @@ sub getProgressInfo
   return $result;
 }
 
-#builds an object file
+#builds an object file !!! THREAD WARNING !!!
 #first argument is the file without a path and without suffix
 sub buildObjectFile
 {
@@ -624,26 +646,40 @@ sub buildObjectFile
   my $comileArguments = $rebuildOFilesArguments{$filename};
   my $path = $fileMapping{$filename.".$codeSuffix"};
   
+  $globalMutex->down;
   my $progress = getProgressInfo();
-  my $command = "$compiler -o$buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
+  
+  my $compilerCommand = $compiler;
+  if ($useDistcc){
+    $compilerCommand = "distcc $compiler";
+  }
+  my $command = "$compilerCommand -o$buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
+
   print $colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
         "$filename.o$colourNormal\n";
+
+  $currentOFileNumber++;
   
   if ($showCompilerCommand == 1){
       print "$command\n";
   }
+  $globalMutex->up;
+  
   `$command`;
   if ($? != 0) {
+    $globalMutex->down;
     print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
     if (!$showCompilerCommand){
       print "$command\n";
     }
+    $globalMutex->up;
     unlink($filename.".".$objectSuffix);
       die $colourError."   Sorry   $colourNormal\n";
   }
   #invalidate object files timestamp cache
+  $globalMutex->down;
   $timeStamps{$buildDir.$filename.".$objectSuffix"} = -2;
-  $currentOFileNumber++;
+  $globalMutex->up;
 }
 
 #builds an object file
@@ -755,9 +791,7 @@ sub findExeFiles
 
   findObjectFiles($filename);
   
-  if ($outputDir eq ""){
-    $outputDir = $buildDir;
-  }
+
   my $exeTime = getTime($outputDir.$filename."$exeSuffix");
   my $objTime = getTime($buildDir.$filename.".$objectSuffix");
   
@@ -848,6 +882,29 @@ sub scanForRebuildFiles
 
 }
 
+
+#the threaded sub that builds the .o files !!! THREAD WARNING !!!
+sub threadBuildFiles
+{
+  my $done = 0;
+  while (!$done){
+    my $file;
+    $globalMutex->down;
+    if ($nextBuildJob == $numberOfOFiles){
+      $done = 1;
+    }
+    else {
+      $file = $sortedBuildJobs[$nextBuildJob];
+      $nextBuildJob++;
+    }
+    $globalMutex->up;
+
+    if (!$done){    
+      buildObjectFile($file);
+    }
+  }
+}
+
 #builds the files requested
 sub buildFiles
 {
@@ -861,13 +918,26 @@ sub buildFiles
     $rebuildOFiles{$file}=getTime("$path$file.$codeSuffix");
   }
   
-  print $colourAction."Building files$colourNormal\n";
-  my @sorted;
-  @sorted = sort {$rebuildOFiles{$b} cmp  $rebuildOFiles{$a}}keys%rebuildOFiles;
-  $numberOfOFiles=$#sorted+1;
+  
+  my $buildMessage = "Building files";
+  if ($numberOfThreads != 1){
+    $buildMessage .= " (multi threaded using $numberOfThreads threads)";
+  }
+  print $colourAction.$buildMessage."$colourNormal\n";
+
+  @sortedBuildJobs = sort {$rebuildOFiles{$b} cmp  $rebuildOFiles{$a}}keys%rebuildOFiles;
+  $numberOfOFiles=$#sortedBuildJobs+1;
   $compileStartTime = time();
-  for my $file (@sorted){
-    buildObjectFile($file);
+
+  for (my $i=1; $i!=$numberOfThreads; $i++){
+    my $thread = threads->new(\&threadBuildFiles);
+    push @threads, $thread;
+  }
+  
+  threadBuildFiles();
+  
+  for my $thread (@threads){
+    $thread->join;
   }
   
   scanForRebuildFiles();
@@ -878,6 +948,7 @@ sub buildFiles
 
 }
 
+
 sub testFiles
 {
   if ($outputDir eq ""){
@@ -887,6 +958,28 @@ sub testFiles
     print $colourAction."Testing $file$colourNormal\n";
     print `$testProgram$outputDir$file $testArguments`;
   } 
+}
+
+#fixes variables so that they get there default values
+sub fixVariables
+{
+  if ($numberOfThreads == 0 and $useDistcc){
+    my $distccSettings = $ENV{"DISTCC_HOSTS"};
+    if (defined($distccSettings)){
+      $distccSettings =~ s/^\s+//;
+      $distccSettings =~ s/\s+$//;
+      my @hostArray = split /\s+/, $distccSettings;
+      $numberOfThreads = $#hostArray+1;
+    }
+  }
+  
+  if ($numberOfThreads < 1){
+    $numberOfThreads = 1;
+  }
+  
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }
 }
 
 $ENV{"target"}=$target;
@@ -929,6 +1022,9 @@ sub purgeDir
   }  
 }
 
+
+
+fixVariables();
 
 if ($doClean == 1){
   my $proceedWithClean = 1;

@@ -4,15 +4,19 @@
 <br>
 <div align="center"><img src="./screenshot.png" width="584" height="383" border="0" alt="screenshot"></div><br>
 <h2>News</h2>
+2004-09-28 Multi threaded building see option -j, now you can use your multi CPU machine.
+      Building using <a href="http://distcc.samba.org/">distcc</a> see option -distcc, now
+      you can distribute the build process across multiple computers.
+      New file release V1 RC3<br>
 2004-08-25 Using Getopt to read options and arguments, enabling the definition of custom options like
 	   -cross or -debug. See manual for more details.<br>
 2004-06-27 Minor change readConfigFile now dies if there is an error in the file, previously it just continued without a single warning. New file release V1 RC2<br> 
 2004-06-25 Added $lazyLinking variable and //#lazylinking on/off, allowing you not to specify the //#link comments.
-           Se the manual for further information.<br>
+      Se the manual for further information.<br>
 2004-05-02 Added progress information when compiling, its a first step towards distributed compiling (it now
-generates a list of all files that need to be compiled).<br>
+      generates a list of all files that need to be compiled).<br>
 2004-03-15 Added an autoTarget function (works under linux(tested on Debian)
-and windows(most likely just Cygwin)) and a tiny test project demonstrating buildpp, also the manual has been updated.<br>
+      and windows(most likely just Cygwin)) and a tiny test project demonstrating buildpp, also the manual has been updated.<br>
 2004-02-23 Web page created.
  
 <h2>Getting buildpp</h2>
@@ -47,9 +51,8 @@ And if you are developing non GPL things <a href="http://www.mingw.org/">MinGW</
 are usable as well, but MinGW is free.<br>
 <h2>Future features (planed ones)</h2>
 <ul>
-<li>Lazy linking (It determines link dependencies without ///#link comments (this will work in the most cases))</li>
-<li>Distributed building allowing the build process to be distributed across multiple machines, it will also allow
-multi-threaded building on dual CPU systems</li>
+<li>Write a better manual.</li>
+<li>Currently thats it, no more ideas.</li>
 </ul>
 <h2>Support BuildPP</h2>
 I really would like to know if anyone besides me, my friends and the guys at work uses buildpp.<br>

@@ -21,6 +21,16 @@ directory! The build directory is specified with em($buildDir) it defaults to
 "em(build/)". If em($cleanConfirm) is true buildpp will request you to confirm
 the clean action, the default is em(1) (true).
 
+dit(bf(-distcc)) Overwrites em($useDistcc) and sets it true.
+Use distcc when compiling. Prefixes the compiler command with
+"distcc ", if you don't set the number of threads to use with em(-j) it will count the
+number of hosts in the environment variable em(DISTCC_HOSTS)
+and uses this value.
+
+dit(bf(-j)) Overwrites em($numberOfThreads), this is the number of threads to use
+when compiling .o files. Useful when having more than one CPU or "cluster"
+compiling.
+
 dit(bf(-usecolours or -usecolors or -c)) Overwrites em($useColours) and sets it true.
 Buildpp will colourize the output if em($useColours) is true,
 the default is em(0) (false).
@@ -33,7 +43,7 @@ dit(bf(-girlie)) Overwrites em($girlie) and sets it true.
 Buildpp will tell you things you probably don't want to know if em($girlie)
 is true, the default is em(0) (false).
 
-dit(bf(-test or -t)) Test the target after building it (it must be executable or
+dit(bf(-test)) Test the target after building it (it must be executable or
 buildpp will look for its file in vane, complaining about it). If you specify
 something like em(-test="Hello World") Hello World will be given on the
 commandline to the target.
@@ -119,6 +129,15 @@ will be deleted on clean! (DEFAULT="build/").
 bf($cleanConfirm) If true you are requested to confirm when cleaning
 (DEFAULT=1).
 
+bf($useDistcc)) If true all compile commands will be prefixed with 
+"distcc " (DEFAULT=0), additional if bf($numberOfThreads)
+has't been set it will
+be set to the number of hosts in the environment variable
+em(DISTCC_HOSTS)
+
+
+bf($numberOfThreads) The number of threads to use when compiling
+object files (DEFAULT=1)
 
 bf(DISPLAY CONTROLS)
 
@@ -153,9 +172,6 @@ compilation (else just on error) (DEFAULT=0).
 
 bf($showLinkerCommand) If true always shows the command used for linking
 (else just on error) (DEFAULT=0).
-
-manpagebugs()
-No known bugs at this time.
 
 manpageauthor()
 Aminova Vision Technology ApS  and Visti Andresen (sftalpa at users.sourceforge.net)
