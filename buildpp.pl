@@ -620,8 +620,8 @@ sub buildObjectFile
   
   my $progress = getProgressInfo();
   my $command = "$compiler -o$buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
-  print $colourAction."$currentOFileNumber/$numberOfOFiles Compiling ".
-        "$filename.o           $progress$colourNormal\n";
+  print $colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
+        "$filename.o$colourNormal\n";
   
   if ($showCompilerCommand == 1){
       print "$command\n";
