@@ -35,7 +35,7 @@ test:
 .PHONY: webupdate
 webupdate: buildpp.html
 	cp buildpp.html www/
-	scp  www/*.html www/*.png sftalpa@shell.sourceforge.net:www/
+	rsync  www/*.html www/*.png sftalpa@shell.sourceforge.net:www/
 
 .PHONY : clean
 clean:
