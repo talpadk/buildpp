@@ -118,10 +118,16 @@ my $exeSuffix = "";
 #xcompiling to windows. It's just put in front so remember a trailing space
 my $testProgram = "";
 
-#The dir where buildit generates files (.o .exe and .d files)
+#The dir where buildpp generates files (.o and .d files)
 #if it dos't exist it will be created. WARNING ALL files here
 #will be deleted on clean! 
 my $buildDir = "build/";
+
+#The dir where buildpp generates output files (.exe files)
+#if it dos't exist it will be created. WARNING ALL files here
+#will be deleted on clean! 
+#If $outputDir is left empty the value of $buildDir will be used instead
+my $outputDir = "";
 
 #If true you are requested to confirm when cleaning
 my $cleanConfirm = 1;
@@ -720,7 +726,10 @@ sub buildExeFile
   my $filename = $_[0];
   my $arguments = $rebuildExeFilesArguments{$filename};
 
-  my $command = "$linker -o$buildDir$filename$exeSuffix $arguments";
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }
+  my $command = "$linker -o$outputDir$filename$exeSuffix $arguments";
   
   print $colourAction."Linking $filename$exeSuffix$colourNormal\n";
   
@@ -745,8 +754,11 @@ sub findExeFiles
   my $filename = $_[0];
 
   findObjectFiles($filename);
-
-  my $exeTime = getTime($buildDir.$filename."$exeSuffix");
+  
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }
+  my $exeTime = getTime($outputDir.$filename."$exeSuffix");
   my $objTime = getTime($buildDir.$filename.".$objectSuffix");
   
   my $needsRebuild = 0;
@@ -803,13 +815,22 @@ sub findExeFiles
 }
     
 
-#ensures that the build directory exists
+#ensures that the build directories exists
 sub buildDirTest
 {
   my @fileStatus = stat($buildDir);
   if (scalar(@fileStatus) == 0){
     print $colourAction."Creating build dir$colourNormal\n";
     mkdir($buildDir);
+  }
+  
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }
+  @fileStatus = stat($outputDir);
+  if (scalar(@fileStatus) == 0){
+    print $colourAction."Creating output dir$colourNormal\n";
+    mkdir($outputDir);
   }
 }
 
@@ -859,10 +880,13 @@ sub buildFiles
 
 sub testFiles
 {
-    for my $file (@targets){
-      print $colourAction."Testing $file$colourNormal\n";
-      print `$testProgram$buildDir$file $testArguments`;
-    } 
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }  
+  for my $file (@targets){
+    print $colourAction."Testing $file$colourNormal\n";
+    print `$testProgram$outputDir$file $testArguments`;
+  } 
 }
 
 $ENV{"target"}=$target;
@@ -883,9 +907,43 @@ if (!$useColours){
 
 readModuleList();
 
+#removes ALL files from a directory, use with extreme care!
+#first arg is the path of the dir
+sub purgeDir
+{
+  my $dirName = $_[0];
+  my $dir;
+  if (!opendir ($dir, $dirName)) {
+    print "Can't find directory $dirName, unable to clean it";
+  }
+  else {
+    my @entrys = readdir $dir;
+    
+    foreach(@entrys){
+      if ($_ !~ /^\.+$/){
+        #it was not .. or .
+        unlink($dirName."/$_");
+      }
+    }
+    closedir $dir;
+  }  
+}
+
+
 if ($doClean == 1){
   my $proceedWithClean = 1;
-  print $colourWarning."Cleaning build directry '$buildDir'";
+    
+  if ($outputDir eq ""){
+    $outputDir = $buildDir;
+  }
+
+  
+  if ($outputDir eq $buildDir){
+    print $colourWarning."Cleaning build directry '$buildDir'";
+  }
+  else {
+    print $colourWarning."Cleaning directries '$buildDir' and '$outputDir'";
+  }
   if ($cleanConfirm){
     print ", are you sure? Yes or no: ";
     my $answer = <STDIN>;
@@ -903,21 +961,11 @@ if ($doClean == 1){
     print "$colourNormal\n";
   }
   
-  my $dir;
-  if ($proceedWithClean && !opendir ($dir, $buildDir)) {
-    print "Can't find build directory '$buildDir' unable to clean";
+  if ($proceedWithClean){
+    purgeDir($buildDir);
+    purgeDir($outputDir);
   }
-  else {
-    my @entrys = readdir $dir;
-    
-    foreach(@entrys){
-      if ($_ !~ /^\.+$/){
-        #it was not .. or .
-        unlink($buildDir."/$_");
-      }
-    }
-    closedir $dir;
-  }
+  
 }
 
 if ($doBuild == 1){
