@@ -594,6 +594,7 @@ sub buildObjectFile
     unlink($filename.".".$objectSuffix);
       die $colourError."   Sorry   $colourNormal\n";
   }
+  #invalidate object files timestamp cache
   $timeStamps{$buildDir.$filename.".$objectSuffix"} = -2;
   $currentOFileNumber++;
 }
