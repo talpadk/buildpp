@@ -24,6 +24,15 @@ show: buildpp.1.gz
 showhtml: buildpp.html
 	$(html) buildpp.html
 
+.PHONY: install
+install:
+	cp buildpp.pl /usr/bin/
+
+.PHONY: webupdate
+webupdate: buildpp.html
+	cp buildpp.html www/
+	scp  www/*.html sftalpa@shell.sourceforge.net:www/
+
 .PHONY : clean
 clean:
 	rm -f buildpp.1.gz buildpp.1 buildpp.html 

@@ -44,7 +44,7 @@ are stored. The pathes are searched recursivly.
 
 bf(localbuild.pl) Is read to dertermine the local build configuration,
 allowing to configure things that are specific for a build under a sertaint
-platform. It is preferable to 
+platform.
 
 manpagebugs()
 No known bugs at this time.
