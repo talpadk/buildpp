@@ -38,6 +38,9 @@ my @sortedBuildJobs:shared = ();
 
 my $workingDir:shared = &Cwd::cwd();
 
+#a mapping of the pathes not to search for source files
+my %dontSearchForFiles=();
+
 #a mapping to find the path of a file
 my %fileMapping:shared=();
 
@@ -303,11 +306,16 @@ if (!$exeSuffix eq ""){
     $exeSuffix = ".$exeSuffix";
 }
 
-#searcehs a dir for files that may be used to gennerate .o and exe files with
+#searches a dir for files that may be used to gennerate .o and exe files with
 sub findFilesInDir
 {
   my $dirName =  $_[0];
   $dirName =~ s/[\n\r]+$//;
+  if (exists($dontSearchForFiles{$dirName})){
+    return;
+  }
+  
+  
   my $dir;
   opendir ($dir, $dirName)
     || die "Can't find directory '$dirName' specified in modulelist";
@@ -358,7 +366,12 @@ sub readModuleList
     
   while (<moduleList>){
     my $dirName = $_;
-    findFilesInDir($dirName);
+    if (substr($dirName,0,1) eq "!"){
+      $dontSearchForFiles{substr($dirName,1)}=1;
+    }
+    else {
+      findFilesInDir($dirName);
+    }
   }
 
   close moduleList;

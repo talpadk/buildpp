@@ -5,7 +5,7 @@ manpagename(buildpp) (A build system like make, but without makefiles)
 manpagesynopsis()
 bf(buildpp) [-clean] [-usecolours] [-verbose] [-girlie] [-test] targets
 manpagedescription()
-The purpose of buildpp is to build source code into programs and librarys
+The purpose of buildpp.pl is to build source code into programs and libraries
 (currently only programs are supported (tested)).
 It is primarily intended for C and C++ but it should be possible to use other 
 languages.
@@ -18,7 +18,7 @@ startdit()
 dit(bf(-clean)) Removes all files in the build directory, all files will be 
 remove without regard to whom made them. NEVER put any files in the build 
 directory! The build directory is specified with em($buildDir) it defaults to
-"em(build/)". If em($cleanConfirm) is true buildpp will request you to confirm
+"em(build/)". If em($cleanConfirm) is true buildpp.pl will request you to confirm
 the clean action, the default is em(1) (true).
 
 dit(bf(-distcc)) Overwrites em($useDistcc) and sets it true.
@@ -32,7 +32,7 @@ when compiling .o files. Useful when having more than one CPU or "cluster"
 compiling.
 
 dit(bf(-usecolours or -usecolors or -c)) Overwrites em($useColours) and sets it true.
-Buildpp will colourize the output if em($useColours) is true,
+Buildpp will colourise the output if em($useColours) is true,
 the default is em(0) (false).
 
 dit(bf(-verbose or -v)) Overwrites em($verbose) and sets it true.
@@ -49,11 +49,16 @@ something like em(-test="Hello World") Hello World will be given on the
 commandline to the target.
 enddit()
 manpagefiles()
-bf(modulelist) contains a newline seperated list of pathes where the code files
-are stored. The pathes are searched recursivly.
+bf(modulelist) contains a newline separated list of pathes where the code files
+are stored. The pathes are searched recursively. A new feature is the possibility 
+to specify paths that should't be searched, this is done by putting a ! in front of the path.
+Exclusion paths must be specified before any inclusion pathes. If you wish to define an
+inclusion path beginning with a ! write it like this ./!weirdPathName.
+It is also important that the paths matches, "!src/brokenStuff" , "./src" won't work
+as expected but "!./src/brokenStuff", "./src" and "!src/brokenStuff" , "src" will.
 
-bf(localbuild.pl) Is read to dertermine the local build configuration,
-allowing to configure things that are specific for a build under a sertaint
+bf(localbuild.pl) Is read to determine the local build configuration,
+allowing to configure things that are specific for a build under a certain
 platform.
 The file is read using bf(readConfigFile)
 
@@ -64,7 +69,7 @@ in the localbuild.pl file or any file it includes with readConfigFile
 
 bf(readConfigFile("filename")) Tries to reads an extra file and parse its contents,
 it will only generate a warning if it can't find it.
-However if the file fails to parse, buildpp stops.
+However if the file fails to parse, buildpp.pl stops.
 
 bf(autoTarget()) Tries to determine the OS we are running under and
 sets bf($target) accordingly.
@@ -122,7 +127,7 @@ bf($ldflags) The default flags used when linking object files together
 bf($exeSuffix) The suffix to put after executable files, DON'T put a
 dot in front (DEFAULT="").
 
-bf($buildDir) The dir where buildit generates files (.o .exe and .d files)
+bf($buildDir) The dir where buildpp.pl generates files (.o .exe and .d files)
 if it dos't exist it will be created. WARNING ALL files here
 will be deleted on clean! (DEFAULT="build/").
 
