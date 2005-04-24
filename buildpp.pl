@@ -310,7 +310,6 @@ if (!$exeSuffix eq ""){
 sub findFilesInDir
 {
   my $dirName =  $_[0];
-  $dirName =~ s/[\n\r]+$//;
   if (exists($dontSearchForFiles{$dirName})){
     return;
   }
@@ -366,6 +365,7 @@ sub readModuleList
     
   while (<moduleList>){
     my $dirName = $_;
+    $dirName =~ s/[\n\r]+$//;
     if (substr($dirName,0,1) eq "!"){
       $dontSearchForFiles{substr($dirName,1)}=1;
     }
