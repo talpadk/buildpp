@@ -433,6 +433,7 @@ sub getTime
 #parses a file and gennerates a parsed version in memory (only 1. level deps are
 #generated, code files will also gennerate linker level 1. information
 #first argument is the name of the file without path
+#returns nothing, however the result can be found in the memory cache
 sub parseFile
 {
   my $filename = $_[0];
@@ -444,7 +445,8 @@ sub parseFile
   if ($verbose){
     print $colourVerbose."Parsing file $filename".$colourNormal."\n";
   }
-
+  print  $colourVerbose."Parsing file $filename".$colourNormal."\n";
+  
   if (!exists($fileMapping{$filename})){
     die $colourError."Unable to find file '$filename'".$colourNormal."\n";
   }
@@ -453,7 +455,9 @@ sub parseFile
   #parse it 
   my $file;
   my @includeList=();
+  #all files start out with generic all target
   my $currentTarget = "all";
+  #use project wide setting for lazyLinking
   my $currentLazyLinking = $lazyLinking;
 
   open ($file, "<$filePath") 
@@ -461,9 +465,11 @@ sub parseFile
 
   while (<$file>){
     my $line = $_;  
+    #detect local target changes
     if ($line =~ /\/{2,3}\#target\s+(\S+)/){
       $currentTarget = $1;
     }
+    #detect local lazy linking changes
     if ($line =~ /\/{2,3}#lazylinking\s+(\S+)/){
       my $arg = $1;
       if ($arg =~ /off/i){
@@ -474,7 +480,8 @@ sub parseFile
       }
     }
     if ($currentTarget eq "all" or $target eq $currentTarget){
-      if ($line =~ /(\#include\s*\"\s*)(\S+)(\s*\")/){
+      #curent target matches, now read other options
+      if ($line =~ /^\s*(\#include\s*\"\s*)(\S+)(\s*\")/){
         push (@includeList, $1.$2.$3);
         if ($currentLazyLinking){
           my $linkName = $2;
@@ -483,8 +490,8 @@ sub parseFile
           push (@includeList, "\#link $linkName");
         }
       }
-      if ($line =~ /\/{2,3}(\#\S+\s?\S*)\s*/){
-        push (@includeList, ($1));
+      if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\lazylinking)(\s?[^\r^\n]*)/){
+        push (@includeList, ($1.$2));
       }
     } 
   }
@@ -551,11 +558,12 @@ sub parseFileRecurcive
 
 
 #gennerate .d file on disk (cached version of parseFile)
-#includes all levels
+#includes all levels, created using parseFileRecurcive
 #first argument is the name of the file without path
 sub parseFileCached{
   my $filename = $_[0];
   
+  #test for a cached(mem) version and return it if found 
   if (exists($depCache{$filename})){
     my @result = @{$depCache{$filename}};
     return @result;
@@ -565,23 +573,26 @@ sub parseFileCached{
     print $colourVerbose."Testing $filename.d$colourNormal\n";
   }
   
+  #if source (.cpp) is newer that .d file we need to refresh disk version
+  my $rebuild = 0;
   my $dFilename = $buildDir.$filename.".d";
   my $dTime = getTime($dFilename);
   my $fileTime = getTime($fileMapping{$filename}.$filename);
-  
-  my $rebuild = 0;
-  
+
   if ($dTime == -1 or $dTime <= $fileTime){
     $rebuild = 1;
+     $colourVerbose."new".$colourNormal."\n";
   }
   else {
+    #dfile newer that source, now we need to test .dfiles that tis file depends on
     my $dFile;
     open ($dFile, "<$dFilename") ||
       die ($colourError."Unexpected error unable to open $dFilename for input".
            $colourNormal."\n");
     while (<$dFile>){
       my $line = $_;
-      if ($line =~ /\#include\s+\"(\S+)\"/){
+      #depends on a "header" file
+      if ($line =~ /\#include\s+\"([^"]+)\"/){
         my $depName = $1;
         if (!exists($fileMapping{$depName})){
           die ($colourError."Unknown file $depName$colourNormal\n");
@@ -593,7 +604,8 @@ sub parseFileCached{
           last();
         }
       }
-      if ($line =~ /\#link\s+(\S+)/){
+      #depends on a source file
+      if ($line =~ /\#link\s+([^[\r\n]]+)/){
         my $depName = $1.".$codeSuffix";
         if (!exists($fileMapping{$depName})){
           die ($colourError."Unknown file $depName$colourNormal\n");
@@ -611,6 +623,7 @@ sub parseFileCached{
   my @deps = ();
   
   if ($rebuild){
+    #rebuild was needed
     if ($showDBuild){
       print $colourAction."Building $filename.d$colourNormal\n";
     }
@@ -631,6 +644,7 @@ sub parseFileCached{
     $timeStamps{$dFilename} = -2;
   }
   else {
+    #rebuild was not needed, use disk file instead
     my $dFile;
     open ($dFile, "<$dFilename") ||
       die ($colourError."Unexpected error unable to open $dFilename for input".
@@ -790,7 +804,7 @@ sub findObjectFiles
     my $myCFlags = $cflags;
   
     for my $item (@linkList){
-      if ($item =~ /^#cflags\s+(.*)\s*/){
+      if ($item =~ /^#cflags\s+([^\n^\r]+)/){
         $myCFlags = $myCFlags." $1";
       }
     }
