@@ -33,9 +33,13 @@ test:
 	./buildpp.pl
 
 .PHONY: webupdate
-webupdate: buildpp.html
+webupdate: 
+  cd /tmp
+  cvs -z3 -d :ext:sftalpa@cvs.sf.net:/cvsroot/buildpp export -D now buildpp
+  cd buildpp
+  make buildpp.html
 	cp buildpp.html www/
-	rsync  www/*.html www/*.png sftalpa@shell.sourceforge.net:www/
+	rsync -r www/*.html www/*.png www/tutorials sftalpa@shell.sourceforge.net:www/
 
 .PHONY : clean
 clean:

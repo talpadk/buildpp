@@ -102,7 +102,7 @@ my $argumentsRead:shared = 0;
 #A hash from regEx's for OS names to $target values
 my %osHash:shared = ("linux" => "linux", "cygwin" => "windows", "darwin" => "macosx");
 
-my $incDirs:shared="";
+my $incDirs:shared="-I. ";
 
 
 
@@ -358,7 +358,7 @@ sub findFilesInDir
 #reads the modulelist file and generates the search tables for building
 sub readModuleList
 {
-  $incDirs="";
+  $incDirs="-I. ";
   print $colourAction."Reading module list and compiling file list$colourNormal\n";
   open (moduleList, "<modulelist")
     || die "Can't open modulelist";

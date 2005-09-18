@@ -1,0 +1,3 @@
+autoTarget();
+$lazyLinking=1;
+

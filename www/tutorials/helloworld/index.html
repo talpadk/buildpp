@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>HelloWorld</title>
+</head>
+<body>
+<h1>HelloWorld</h1>
+This tutorial is located under  <em>www/tutorials/helloworld</em> in the buildpp distribution.
+
+
+
+<h2>The module list</h2>
+The file <em>modulelist</em> contains at newline separated list  of directories where buildpp should look for your source files.<br />
+Each directory is search recursively for source files so you only need to specify the top level directory.<br /> 
+Since this is a very simple project that dosn't borrow files from other projects, and keeps its file in just one directory namely <em>src/</em>
+it only contains one line:<br >
+<table border="1"><tr><td>
+<pre>
+src
+</pre>
+</td></tr><table><a href="modulelist">Download as  text.</a><br />
+For more advanced features of the modulelist please read the <a href="../../buildpp.html">man page</a>.<br /> 
+
+
+
+
+<h2>localbuild.pl</h2>
+This file is a perl script that changes the project settings (variables inside buildpp.pl) to match the requerments of this project.<br />
+This script is read and executed each time buildpp.pl is run.<br/>
+As this is the introduction tutorial I have kept this script very small.<br />
+<table border="1"><tr><td>
+<pre>
+autoTarget();
+$lazyLinking=1;
+</pre>
+</td></tr><table><a href="buildpp.pl">Download as  text.</a><br />
+<ul>
+<li><em>autoTarget()</em> is a function that tries to auto detect the OS running the buildpp.pl script and sets the <em>$target</em> variable accordingly.<br />
+       The target information is't used in this project, but I put it in here anyway.</li>
+<li><em>$lazyLinking=1;</em> by setting <em>$lazyLinking</em> true you tell buildpp.pl that you are too lazy to write <em>//#link</em> comments in the code.<br />
+       This has the effect that every time you write an <em>#include ""</em> statement it implies that you also need to link with the .o file of the given include file
+       when you need to link with this source files .o file.<br />
+       In 99.9% of all cases this is the desired behavior.
+       In the remaining 0.01% there are ways to circumvent the lazyLinking (see <em>//#lazylinking on</em> and <em>//#lazylinking off</em>)
+</ul>
+For more information regarding the possibilities of localbuild.pl read the <a href="../../buildpp.html">man page</a> or an more advanced tutorial if/when available.<br />
+
+
+
+
+
+<h2>Source files</h2>
+All source files are placed under the <em>src/</em> folder.<br />
+They have been converted to HTML using <a href="http://www.chami.com/colorizer/">http://www.chami.com/colorizer/</a><br />
+When writing source file you need to be aware that any files included with "" brackets are searched for dependency information.<br />
+Therefor buildpp.pl <b>must</b> be able to locate them in a directory specified in <em>modulelist</em>.<br />
+Files included in with &lt;&gt; brackets are however not searched.<br />
+<br />
+<b>Generally speaking your header-files should be included using "" and system/library includes should be included using &lt;&gt;<br /></b>
+<br />
+Also buildpp.pl dos't use a C/C++ parser to parse the files, as a result it is oblivious to such things as #ifdef, #else 
+<h3>helloworld.cpp</h3><table border="1"><tr><td>
+<pre>
+<FONT COLOR=GREEN><I>//#exe
+</I></FONT>
+#include <FONT COLOR=PURPLE>"hellowriter.h"</FONT>
+
+<FONT COLOR=RED><B>int</B></FONT> <FONT COLOR=RED><B>main</B></FONT><FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=RED><B>int</B></FONT> argc<FONT COLOR=BLUE SIZE=+1><B>,</B></FONT> <FONT COLOR=RED><B>char</B></FONT> <FONT COLOR=BLUE SIZE=+1>*</FONT><FONT COLOR=BLUE SIZE=+1>*</FONT>args<FONT COLOR=BLUE SIZE=+1><B>)</B></FONT><FONT COLOR=BLUE SIZE=+1><B>{</B></FONT>
+
+  HelloWriter writer<FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+  writer<FONT COLOR=BLUE SIZE=+1><B>.</B></FONT>write<FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=BLUE SIZE=+1><B>)</B></FONT><FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+  <FONT COLOR=RED><B>return</B></FONT> <FONT COLOR=BROWN>0</FONT><FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+
+<FONT COLOR=BLUE SIZE=+1><B>}</B></FONT></pre>
+</td></tr><table><a href="src/helloworld.cpp">Download as  text.</a><br />
+<ul>
+<li><em>//#exe</em>, informs buildpp.pl that when building this file, it should also create an executable file by linking the .o file with all .o files it depends upon.</li>
+<li><em>#include "hellowriter.h"<em>, tells buildpp.pl that each time hellowriter.h has changed we need to recompile this file <em>(This is recurcive eg. if hellowriter.h 
+       depends on a file and it has been changed it also implies that helloworld.cpp need to be recompiled).</em></li>
+<li><em>#include "hellowriter.h"<em>, as lazyLinking has been enabled this line also causes the exe file to be linked with hellowriter.o
+       <em>(This is also recurcive).</em></li> 
+</ul>
+
+
+
+
+
+
+
+
+<h3>hellowriter.h</h3><table border="1"><tr><td>
+<pre>
+#ifndef MOD_HELLO_WRITER_H
+#define MOD_HELLO_WRITER_H
+
+<FONT COLOR=RED><B>class</B></FONT> HelloWriter
+<FONT COLOR=BLUE SIZE=+1><B>{</B></FONT>
+  <FONT COLOR=RED><B>public</B></FONT><FONT COLOR=BLUE SIZE=+1>:</FONT>
+  HelloWriter<FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=BLUE SIZE=+1><B>)</B></FONT><FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+
+	<FONT COLOR=RED><B>void</B></FONT> write<FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=BLUE SIZE=+1><B>)</B></FONT><FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+<FONT COLOR=BLUE SIZE=+1><B>}</B></FONT><FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+
+#endif</pre>
+</td></tr><table><a href="src/hellowriter.h">Download as  text.</a><br />
+
+
+
+
+
+
+
+
+
+<h3>hellowriter.cpp</h3><table border="1"><tr><td>
+<pre>
+#include <FONT COLOR=PURPLE>"hellowriter.h"</FONT>
+#include <FONT COLOR=BLUE SIZE=+1>&lt;</FONT>iostream<FONT COLOR=BLUE SIZE=+1>&gt;</FONT>
+
+using namespace std<FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+
+HelloWriter<FONT COLOR=BLUE SIZE=+1>:</FONT><FONT COLOR=BLUE SIZE=+1>:</FONT>HelloWriter<FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=BLUE SIZE=+1><B>)</B></FONT>
+
+<FONT COLOR=BLUE SIZE=+1><B>{</B></FONT>
+<FONT COLOR=BLUE SIZE=+1><B>}</B></FONT>
+
+<FONT COLOR=RED><B>void</B></FONT> HelloWriter<FONT COLOR=BLUE SIZE=+1>:</FONT><FONT COLOR=BLUE SIZE=+1>:</FONT>write<FONT COLOR=BLUE SIZE=+1><B>(</B></FONT><FONT COLOR=BLUE SIZE=+1><B>)</B></FONT>
+<FONT COLOR=BLUE SIZE=+1><B>{</B></FONT>
+  cout <FONT COLOR=BLUE SIZE=+1>&lt;</FONT><FONT COLOR=BLUE SIZE=+1>&lt;</FONT> <FONT COLOR=PURPLE>"Hello there."</FONT> <FONT COLOR=BLUE SIZE=+1>&lt;</FONT><FONT COLOR=BLUE SIZE=+1>&lt;</FONT> endl<FONT COLOR=BLUE SIZE=+1><B>;</B></FONT>
+
+<FONT COLOR=BLUE SIZE=+1><B>}</B></FONT>
+</pre>
+
+</td></tr><table><a href="src/hellowriter.cpp">Download as  text.</a><br />
+<ul>
+<li><em>#include "hellowriter.h"<em>, tells buildpp.pl that each time hellowriter.h has changed we need to recompile this file.</li>
+<li><em>#include &lt;iostream&gt;<em>, this include is ignored eg.  iostream is <b>not</b> added to the dependencies as it is included using &lt;&gt; brackets.</li> 
+</ul>
+
+
+
+
+
+
+
+
+<h2>Building files</h2>
+This requires a compiler called g++, a gcc compiler should work, other compilers might also work as well.<br />
+When standing in the directory <em>www/tutorials/helloworld</em> you can build the helloworld program by issuing the command:<br />
+"<em>perl buildpp.pl helloworld</em>"<br />
+It should output something similar to this:<pre>reading localbuild.pl
+Reading module list and compiling file list
+Finding files needing to be rebuild
+Parsing file helloworld.cpp
+Parsing file hellowriter.h
+Parsing file hellowriter.cpp
+Building files
+1/2 (0%) Compiling hellowriter.o
+2/2 (50% 2s) Compiling helloworld.o
+Linking files
+Linking helloworld
+</pre>
+You should now have one overcomplicated Hello World &trade; program.<br />
+The output (.o, .d and executables) are written to the directory <em>build/</em>, this location by the way can  be changed (read the <a href="../../buildpp.html">man page</a>)<br />
+<br />
+"<em>perl buildpp.pl -test="" helloworld</em>" will build and run helloworld (without any arguments)<br />
+"<em>perl buildpp.pl helloworld -clean</em>" will clean the <em>build/</em> directory before it builds helloworld (WARNING: all files in the directory will be removed not just files buildpp.pl has created eg. don't put files in this directory),
+it will however ask you if you are sure.<br />
+</body>
+</html>
