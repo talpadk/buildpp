@@ -217,8 +217,10 @@ sub handleArguments
 {
   if (!$argumentsRead){
     my $argument = $_[0];
-	  $argument =~ s/^.*\/([^\/]+)$/$1/e;
-    push(@targets, $argument);
+    if ($argument =~ /^.*\/([^\/]+)$/){
+	$argument = $1;
+    }
+    push(@targets, "$argument");
   }
 }
 
