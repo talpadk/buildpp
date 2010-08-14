@@ -847,8 +847,8 @@ sub buildExeFile
   $timeStamps{$outputDir.$filename."$exeSuffix"} = -2;
 }
 
-#finds the files requered for an exe file, from a file path without suffix
-sub findExeFiles
+#finds the files requered for an output file, from a file + path without suffix
+sub findBuildFilesForFile
 {
   my $filename = $_[0];
 
@@ -864,7 +864,7 @@ sub findExeFiles
     $needsRebuild = 1;
     if ($girlie){
       print $colourGirlie.
-      "Uhh $filename$exeSuffix is younger than ".
+      "Uhh $filename$exeSuffix is older than ".
       "$filename.$objectSuffix relinking will be required $colourNormal\n";
     }
   }
@@ -931,15 +931,20 @@ sub buildDirTest
   }
 }
 
-#tries to find the files that needs rebuild
+#tries to find the files that needs rebuild. For each file it finds that
+#matches the list of user requested files it calls findBuildFilesForFile.
 sub scanForRebuildFiles
 {
+  #gennerate a regular expression that matches the names the user requested to
+  #have build
   my $match = makeMatchString();
+  
+  #iterate over all known files
   foreach(keys(%fileMapping)){
     if ($_ =~ /^($match)$/){
       my $theFile = $_;
       $theFile =~ s/\.$codeSuffix$//;
-      findExeFiles($theFile);
+      findBuildFilesForFile($theFile);
     }
   }
 
@@ -971,6 +976,7 @@ sub threadBuildFiles
 #builds the files requested
 sub buildFiles
 {
+  #create the output dir if it dos't exist.
   buildDirTest();
   print $colourAction."Finding files needing to be rebuild$colourNormal\n";
 
@@ -978,6 +984,8 @@ sub buildFiles
   foreach (keys %rebuildOFiles){
     my $file=$_;
     my $path = $fileMapping{"$file.$codeSuffix"};
+    #Get the modifications dates of the files that needs til be
+    #rebuild (in order to re build the latest modifications fisrt)
     $rebuildOFiles{$file}=getTime("$path$file.$codeSuffix");
   }
   
@@ -988,17 +996,21 @@ sub buildFiles
   }
   print $colourAction.$buildMessage."$colourNormal\n";
 
+  #sort the joblist by modification time
   @sortedBuildJobs = sort {$rebuildOFiles{$b} cmp  $rebuildOFiles{$a}}keys%rebuildOFiles;
   $numberOfOFiles=$#sortedBuildJobs+1;
   $compileStartTime = time();
 
+  #create threads for building O files
   for (my $i=1; $i!=$numberOfThreads; $i++){
     my $thread = threads->new(\&threadBuildFiles);
     push @threads, $thread;
   }
   
+  #do the actual building of the files for the main thread
   threadBuildFiles();
   
+  #wait for all threads to terminate
   for my $thread (@threads){
     $thread->join;
   }
