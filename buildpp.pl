@@ -187,6 +187,9 @@ my $showCompilerCommand:shared = 0;
 #If true always shows the command used for linking (else just on error)
 my $showLinkerCommand:shared = 0;
 
+#If true buildpp will perform a unconditional clean opperation if the last target isn't the same as the current target
+#The functionality is intended to be used if the target may influence how other .o files are build
+my $newTargetClean = 0;
 
 #default sub for post processing.
 #1. argument = path + filename of executable to post process
@@ -233,6 +236,19 @@ my %argumentHash =
 
 #============= Functions below this point ============
 
+
+sub printWarning {
+	print $colourWarning.$_[0].$colourNormal;
+}
+
+sub printError {
+	print $colourError.$_[0].$colourNormal;
+}
+
+sub printFatal {
+	die $colourError.$_[0].$colourNormal;
+}
+
 #Sub to handle arguments, this is called by 'GetOptions' and updates the list of build targets
 sub handleArguments
 {
@@ -240,7 +256,7 @@ sub handleArguments
     my $argument = $_[0];
     #Strip path component from the argument 
     if ($argument =~ /^.*\/([^\/]+)$/){
-	$argument = $1;
+			$argument = $1;
     }
     push(@targets, "$argument");
   }
@@ -1116,6 +1132,38 @@ sub purgeDir
   }  
 }
 
+sub updateCheckForTargetCleanCache {
+	my $targetCache = $buildDir."__lastTarget.cache";
+	my $newTarget = join(',', @targets);
+	my $targetCacheFile;
+
+	open($targetCacheFile, ">$targetCache") || printFatal("Can't write to '$targetCache'\n");
+	print $targetCacheFile $newTarget;
+	close($targetCacheFile);
+}
+
+sub checkForTargetClean {
+	my $targetCache = $buildDir."__lastTarget.cache";
+	my $newTarget = join(',', @targets);
+	my $oldTarget = '';
+	
+	my $targetCacheFile;
+	local $/; # enable localized slurp mode
+	
+	if ($newTargetClean){
+		if (open($targetCacheFile, "<$targetCache")){
+			$oldTarget = <$targetCacheFile>;
+			close($targetCacheFile);
+		}
+
+		if (!($oldTarget eq $newTarget)){
+			printWarning("Target changed from '$oldTarget' to '$newTarget', clean forced!\n");
+			$doClean = 1;
+		}
+	}
+	updateCheckForTargetCleanCache();
+}
+
 #====================== Start of main function below this point =======================
 
 readConfigFile("localbuild.pl");
@@ -1151,6 +1199,8 @@ if ($rescanFiles){
 }
 
 fixVariablesWithDefaults();
+
+checkForTargetClean();
 
 #Code for handling the cleaning of the output and build directories
 if ($doClean == 1){
@@ -1188,7 +1238,7 @@ if ($doClean == 1){
     purgeDir($buildDir);
     purgeDir($outputDir);
   }
-  
+  updateCheckForTargetCleanCache();
 }
 
 if ($doBuild == 1){
