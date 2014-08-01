@@ -140,6 +140,11 @@ has't been set it will
 be set to the number of hosts in the environment variable
 em(DISTCC_HOSTS)
 
+bf($newTargetClean) If true a change in build target will trigger 
+a clean operation (DEFAULT=0), this is useful if the choice of
+target may change the way files are compiled. When using this you
+may want to use em($cleanConfirm=0) as well.
+
 bf($numberOfThreads) The number of threads to use when compiling
 object files (DEFAULT=1)
 
