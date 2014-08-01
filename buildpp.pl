@@ -23,6 +23,10 @@ use threads;
 use threads::shared;
 use Thread::Semaphore;
 
+#=================== Setup of internal global variables ================
+#ToDo refactor the code to have all the global variables suffixed by '_' to make it easier to see that they are globals
+#May cause backwards compatibility issues for the ones that are changeable by localbuild.pl
+
 #mutex for all variables
 my $globalMutex = Thread::Semaphore->new(1);
 
@@ -56,7 +60,7 @@ my %timeStamps:shared=();
 #a hash used to remember files pased for this run, also speeds up parsing
 my %recurivePassedFiles:shared=();
 
-#a hash from files to modificaion times, for the O files that needs to be
+#a hash from files to modification times, for the O files that needs to be
 #rebuild this run.
 my %rebuildOFiles:shared=();
 #a has from filenames to compiler arguments for O files
@@ -68,7 +72,7 @@ my $numberOfOFiles:shared = -1;
 #The time we started to compile files
 my $compileStartTime:shared = 0;
 
-#a hash from files to modificaion times, for the exe files that needs to be
+#a hash from files to modification times, for the exe files that needs to be
 #rebuild this run.
 my %rebuildExeFiles:shared=();
 #a has from filenames to linker arguments for exefiles
@@ -88,18 +92,14 @@ my $argumentsRead:shared = 0;
 #if set to true "" include pathes will have there path removed
 my $stripIncludePath:shared = 0;
 
-#
-#
-#
-#
+
+#============ localbuild.pl changeable variables below this point =============
+
 #
 # The localbuild.pl file may modify the variables below
 #          (those it makes sense to change)
 #
-#
-#
-#
-#
+
 
 
 #A hash from regEx's for OS names to $target values
@@ -201,7 +201,7 @@ my $rescanFiles = 0;
 #1. argument = path to .auto file
 #2. argument = filename of .auto file
 #3. argument = current path (you must return here at the end of the function
-#Set $rescanFiles = 1, if your auto process may gennerate new files.
+#Set $rescanFiles = 1, if your auto process may generate new files.
 sub defaultAutoProcessing
 {
   my $dirName = $_[0];
@@ -214,18 +214,6 @@ sub defaultAutoProcessing
   $rescanFiles = 1;
 }
 my $autoProcessingRef = \&defaultAutoProcessing;
-
-#Sub to handle arguments
-sub handleArguments
-{
-  if (!$argumentsRead){
-    my $argument = $_[0];
-    if ($argument =~ /^.*\/([^\/]+)$/){
-	$argument = $1;
-    }
-    push(@targets, "$argument");
-  }
-}
 
 
 #The hash of arguments for use with GetOptions
@@ -241,6 +229,23 @@ my %argumentHash =
 "j=i" => \$numberOfThreads,
 "distcc" => \$useDistcc
 );
+
+
+#============= Functions below this point ============
+
+#Sub to handle arguments, this is called by 'GetOptions' and updates the list of build targets
+sub handleArguments
+{
+  if (!$argumentsRead){
+    my $argument = $_[0];
+    #Strip path component from the argument 
+    if ($argument =~ /^.*\/([^\/]+)$/){
+	$argument = $1;
+    }
+    push(@targets, "$argument");
+  }
+}
+
 
 
 #Tries to reads an extra file and parse its contents, it will only
@@ -303,15 +308,9 @@ sub parseArguments
   $argumentsRead = 1;
 }
 
-readConfigFile("localbuild.pl");
-
-
-
-if (!$exeSuffix eq ""){
-    $exeSuffix = ".$exeSuffix";
-}
-
-#searches a dir for files that may be used to gennerate .o and exe files with
+#Recursively searches a dir for files that may be used to generate .o and exe files with
+#Any .auto files will also be passed to the $autoProcessingRef function
+#This function appends/populates the globalVariables $incDirs and %fileMapping
 sub findFilesInDir
 {
   my $dirName =  $_[0];
@@ -330,7 +329,7 @@ sub findFilesInDir
   
   foreach(@entrys){
     if ($_ !~ /^\.+$/){
-      #it was not .. or .
+      #it was not .. , . or a linux hidden file
       my $fileName = $dirName."/".$_;
       my $mode = (stat($fileName))[2];
       if (S_ISDIR($mode)){
@@ -383,7 +382,7 @@ sub readModuleList
 }
 
 
-#generates a string that can be used to search the filelist for files that
+#generates a string that can be used to search the file list for files that
 #the user has requested a build of
 sub makeMatchString
 {
@@ -435,8 +434,8 @@ sub getTime
   return $result;
 }
 
-#parses a file and gennerates a parsed version in memory (only 1. level deps are
-#generated, code files will also gennerate linker level 1. information
+#parses a file and generates a parsed version in memory (only 1. level deps are
+#generated, code files will also generate linker level 1. information
 #first argument is the name of the file without path
 #returns nothing, however the result can be found in the memory cache
 sub parseFile
@@ -516,7 +515,7 @@ sub parseFile
 }
 
 
-#parses a given file recursivly returning a list of alle include and
+#parses a given file recursively returning a list of all include and
 #link dependencies
 #returns a list of all dependencies
 #first argument is the name of the file without path
@@ -577,7 +576,7 @@ sub parseFileRecurcive
 }
 
 
-#gennerate .d file on disk (cached version of parseFile)
+#generate .d file on disk (cached version of parseFile)
 #includes all levels, created using parseFileRecurcive
 #first argument is the name of the file without path
 sub parseFileCached{
@@ -608,7 +607,7 @@ sub parseFileCached{
      $colourVerbose."new".$colourNormal."\n";
   }
   else {
-    #dfile newer that source, now we need to test .dfiles that tis file depends on
+    #dfile newer that source, now we need to test .dfiles that this file depends on
     my $dFile;
     open ($dFile, "<$dFilename") ||
       die ($colourError."Unexpected error unable to open $dFilename for input".
@@ -688,7 +687,7 @@ sub parseFileCached{
 
 
 
-#returns a string containing progress infor (only valid when compiling O files) !!! THREAD WARNING !!!
+#returns a string containing progress info (only valid when compiling O files) !!! THREAD WARNING !!!
 sub getProgressInfo
 {
   my $timePassed = time()-$compileStartTime;
@@ -881,7 +880,7 @@ sub buildExeFile
   $timeStamps{$outputDir.$filename."$exeSuffix"} = -2;
 }
 
-#finds the files requered for an output file, from a file + path without suffix
+#finds the files required for an output file, from a file + path without suffix
 sub findBuildFilesForFile
 {
   my $filename = $_[0];
@@ -1074,7 +1073,7 @@ sub testFiles
 }
 
 #fixes variables so that they get there default values
-sub fixVariables
+sub fixVariablesWithDefaults
 {
   if ($numberOfThreads == 0 and $useDistcc){
     my $distccSettings = $ENV{"DISTCC_HOSTS"};
@@ -1095,27 +1094,6 @@ sub fixVariables
   }
 }
 
-$ENV{"target"}=$target;
-
-if (!$argumentsRead){
-  parseArguments();
-}
-
-if (!$useColours){
-  $colourVerbose = "";
-  $colourNormal = "";
-  $colourError = "";
-  $colourAction = "";
-  $colourExternal = "";
-  $colourWarning = "";
-  $colourGirlie = "";
-}
-
-readModuleList();
-if ($rescanFiles){
-  %fileMapping=();
-  readModuleList();
-}
 #removes ALL files from a directory, use with extreme care!
 #first arg is the path of the dir
 sub purgeDir
@@ -1138,10 +1116,43 @@ sub purgeDir
   }  
 }
 
+#====================== Start of main function below this point =======================
 
+readConfigFile("localbuild.pl");
 
-fixVariables();
+#Patch the exe file suffix with dot
+if (!$exeSuffix eq ""){
+    $exeSuffix = ".$exeSuffix";
+}
 
+#$target can have been assigned a value by localbuild.pl (simple assignment or by calling autoTaget())
+#$target is stored in the environment variables allowing external code to use the information if needed
+$ENV{"target"}=$target;
+
+if (!$argumentsRead){
+  parseArguments();
+}
+
+if (!$useColours){
+  $colourVerbose = "";
+  $colourNormal = "";
+  $colourError = "";
+  $colourAction = "";
+  $colourExternal = "";
+  $colourWarning = "";
+  $colourGirlie = "";
+}
+
+readModuleList();
+#.auto files may generate new files if any is seen a file rescan is requested
+if ($rescanFiles){
+  %fileMapping=();
+  readModuleList();
+}
+
+fixVariablesWithDefaults();
+
+#Code for handling the cleaning of the output and build directories
 if ($doClean == 1){
   my $proceedWithClean = 1;
     
