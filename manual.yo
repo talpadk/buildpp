@@ -165,6 +165,12 @@ The default behaviour is to try to execute the file
 See the default function in buildpp.pl for arguments.
 (DEFAULT=\&defaultAutoProcessing)
 
+bf($beforeCompileRunRef) is a reference to a function that is called just
+prior to building files.
+It is primarily intended to handle //#global_cflags implications.
+For instance a target might request to be compiled for a specific CPU/MCU
+this in turn may require the compilere options of the compiler it self to
+be changed. (DEFAULT=\&defaultBeforeCompileRunFunction)
 
 bf(DISPLAY CONTROLS)
 

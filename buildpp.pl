@@ -63,7 +63,7 @@ my %recurivePassedFiles:shared=();
 #a hash from files to modification times, for the O files that needs to be
 #rebuild this run.
 my %rebuildOFiles:shared=();
-#a has from filenames to compiler arguments for O files
+#a hash from filenames to compiler arguments for O files
 my %rebuildOFilesArguments:shared=();
 #The O file currently being build
 my $currentOFileNumber:shared = 1;
@@ -193,9 +193,7 @@ my $newTargetClean = 0;
 
 #default sub for post processing.
 #1. argument = path + filename of executable to post process
-sub defaultPostProcessing
-{
-}
+sub defaultPostProcessing {}
 my $postProcessingRef = \&defaultPostProcessing;
 
 my $rescanFiles = 0;
@@ -218,6 +216,8 @@ sub defaultAutoProcessing
 }
 my $autoProcessingRef = \&defaultAutoProcessing;
 
+sub defaultBeforeCompileRunFunction {}
+my $beforeCompileRunRef = \&defaultBeforeCompileRunFunction;
 
 #The hash of arguments for use with GetOptions
 my %argumentHash = 
@@ -753,7 +753,7 @@ sub buildObjectFile
       $filename =~ s/^.+\///;
   }
   
-  my $comileArguments = $rebuildOFilesArguments{$filename};
+  my $comileArguments = $cflags.$rebuildOFilesArguments{$filename};
   my $path = $fileMapping{$filename.".$codeSuffix"};
   
   $globalMutex->down;
@@ -864,7 +864,7 @@ sub findObjectFiles
     my @linkList = parseFileCached($filename.".$codeSuffix");
     my $linkLine = "$filename.$objectSuffix";
     my %linkMap = ();
-    my $myCFlags = $cflags;
+    my $myCFlags = "";
   
     for my $item (@linkList){
       if ($item =~ /^#cflags\s+([^\n^\r]+)/){
@@ -1079,8 +1079,9 @@ sub buildFiles
     #rebuild (in order to re build the latest modifications fisrt)
     $rebuildOFiles{$file}=getTime("$path$file.$codeSuffix");
   }
-  
-  
+
+	#Call the pre compile function just before we start to build files
+	&$beforeCompileRunRef();
   my $buildMessage = "Building files";
   if ($numberOfThreads != 1){
     $buildMessage .= " (multi threaded using $numberOfThreads threads)";
