@@ -85,6 +85,7 @@ my $buildFailed:shared = 0;
 my $doTest:shared = 0;
 my $testArguments:shared = "!¤/)=(Noonewritesthis!!IHope";
 my @targets:shared = ();
+my $ignoreMissingCodeFiles = 0;
 
 #set to true when options and arguments are read
 my $argumentsRead:shared = 0;
@@ -479,7 +480,15 @@ sub parseFile
   print  $colourVerbose."Parsing file $filename".$colourNormal."\n";
   
   if (!exists($fileMapping{$filename})){
-    die $colourError."Unable to find file '$filename'".$colourNormal."\n";
+      if ($ignoreMissingCodeFiles){
+	my @emptyDeps;
+        printWarning("Ignoreing file $filename\n");
+	$deps{$filename} = \@emptyDeps;
+	return;
+      }
+      else {
+	die $colourError."Unable to find file '$filename'".$colourNormal."\n";
+      }
   }
   my $filePath = $fileMapping{$filename}.$filename;
 
@@ -524,7 +533,10 @@ sub parseFile
           my $linkName = $lineFile;
           #remove file suffix
           $linkName =~ s/\.[^\.]+$//;
-          push (@includeList, "\#link $linkName");
+	  #only push the link requirements if the file exists or we don't allow missing code files
+	  if ((!$ignoreMissingCodeFiles) || (exists($fileMapping{$lineFile}) && -e $fileMapping{$lineFile}."$linkName.$codeSuffix")){
+	    push (@includeList, "\#link $linkName");
+	  }
         }
       }
       if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\#lazylinking|\#global_cflags)(\s?[^\r^\n]*)/){

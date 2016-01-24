@@ -107,6 +107,8 @@ bf($compiler) The program to use as a compiler (DEFAULT="g++").
 bf($cflags) The default flags used when compiling code into object files
 (DEFAULT="-c -Wall ") see bf(CODE COMMENTS) for more info.
 
+bf($ignoreMissingCodeFiles) If true missing code files will be ignored when lazylinking, this can be useful if the project uses header files that dosen't have a code file implementing anything. The normal buildpp.pl behaviour would be to consider missing code files an error and insist on blank code files for headers without code (DEFAULT=0).
+
 bf($includeSuffix) Defines the suffixes that if included with
 #include "" will become part of the dependencies.
 Used in a regEx therefore the weird syntax
