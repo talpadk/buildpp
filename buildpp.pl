@@ -63,7 +63,7 @@ my %recurivePassedFiles:shared=();
 #a hash from files to modification times, for the O files that needs to be
 #rebuild this run.
 my %rebuildOFiles:shared=();
-#a has from filenames to compiler arguments for O files
+#a hash from filenames to compiler arguments for O files
 my %rebuildOFilesArguments:shared=();
 #The O file currently being build
 my $currentOFileNumber:shared = 1;
@@ -193,9 +193,7 @@ my $newTargetClean = 0;
 
 #default sub for post processing.
 #1. argument = path + filename of executable to post process
-sub defaultPostProcessing
-{
-}
+sub defaultPostProcessing {}
 my $postProcessingRef = \&defaultPostProcessing;
 
 my $rescanFiles = 0;
@@ -218,6 +216,8 @@ sub defaultAutoProcessing
 }
 my $autoProcessingRef = \&defaultAutoProcessing;
 
+sub defaultBeforeCompileRunFunction {}
+my $beforeCompileRunRef = \&defaultBeforeCompileRunFunction;
 
 #The hash of arguments for use with GetOptions
 my %argumentHash = 
@@ -247,6 +247,13 @@ sub printError {
 
 sub printFatal {
 	die $colourError.$_[0].$colourNormal;
+}
+
+sub printGirlie {
+	my $string = $_[0];
+	if ($girlie){
+		print $colourGirlie.$string.$colourNormal;
+	}
 }
 
 #Sub to handle arguments, this is called by 'GetOptions' and updates the list of build targets
@@ -453,7 +460,7 @@ sub getTime
 #parses a file and generates a parsed version in memory (only 1. level deps are
 #generated, code files will also generate linker level 1. information
 #first argument is the name of the file without path
-#returns nothing, however the result can be found in the memory cache
+#returns nothing, however the result can be found in the memory cache (%deps)
 sub parseFile
 {
   my $filename = $_[0];
@@ -520,7 +527,7 @@ sub parseFile
           push (@includeList, "\#link $linkName");
         }
       }
-      if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\lazylinking)(\s?[^\r^\n]*)/){
+      if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\#lazylinking|\#global_cflags)(\s?[^\r^\n]*)/){
         push (@includeList, ($1.$2));
       }
     } 
@@ -531,8 +538,13 @@ sub parseFile
 }
 
 
-#parses a given file recursively returning a list of all include and
-#link dependencies
+#Parses a given file recursively returning a list of all include and link dependencies.
+#
+#The parsing is done by calling parseFile(), and calling it self for the recursive element.
+#
+#The following tokens triggers a recursion #link and #include
+#From the recursion into #link dependencies only #link, #ldflags and #global_cflags are used
+#
 #returns a list of all dependencies
 #first argument is the name of the file without path
 sub parseFileRecurcive
@@ -568,7 +580,7 @@ sub parseFileRecurcive
       parseFile($newFile.".$codeSuffix");
       my @subItem = parseFileRecurcive($newFile.".$codeSuffix");
       for my $subSubItem (@subItem){
-        if ($subSubItem =~ /\#link/ || $subSubItem =~ /\#ldflags/){
+        if ($subSubItem =~ /\#link/ || $subSubItem =~ /\#ldflags/ || $subSubItem =~ /\#global_cflags/){
           if (!exists($unique{$subSubItem})){
             push (@result, $subSubItem);
             $unique{$subSubItem} = " ";
@@ -620,7 +632,7 @@ sub parseFileCached{
 
   if ($dTime == -1 or $dTime <= $fileTime){
     $rebuild = 1;
-     $colourVerbose."new".$colourNormal."\n";
+    $colourVerbose."new".$colourNormal."\n";
   }
   else {
     #dfile newer that source, now we need to test .dfiles that this file depends on
@@ -741,7 +753,7 @@ sub buildObjectFile
       $filename =~ s/^.+\///;
   }
   
-  my $comileArguments = $rebuildOFilesArguments{$filename};
+  my $comileArguments = $cflags.$rebuildOFilesArguments{$filename};
   my $path = $fileMapping{$filename.".$codeSuffix"};
   
   $globalMutex->down;
@@ -786,7 +798,7 @@ sub buildObjectFile
 }
 
 #builds an object file
-#first argument is the code file to use l
+#first argument is the code file to use
 sub findObjectFiles
 {
   my $filename = $_[0];
@@ -852,7 +864,7 @@ sub findObjectFiles
     my @linkList = parseFileCached($filename.".$codeSuffix");
     my $linkLine = "$filename.$objectSuffix";
     my %linkMap = ();
-    my $myCFlags = $cflags;
+    my $myCFlags = "";
   
     for my $item (@linkList){
       if ($item =~ /^#cflags\s+([^\n^\r]+)/){
@@ -1022,7 +1034,37 @@ sub threadBuildFiles
   }
 }
 
+#Finds the #global_cflags in the requested build taregets and atts them to $cflags
+sub getGlobalFlags
+{
+	#gennerate a regular expression that matches the names the user requested to
+  #have build
+  my $match = makeMatchString();
+  
+	my %flagsFound = ();
+
+  #iterate over all known files
+  foreach(keys(%fileMapping)){
+    if ($_ =~ /^($match)$/){
+      my $theFile = $_;
+			my @tokens = parseFileCached($theFile);
+			foreach my $token (@tokens){
+				if ($token =~ /#global_cflags\s+(.*)/){
+					my $flag = $1;
+					$flagsFound{$flag}=1;
+					printGirlie("Oh Look in '$theFile' I found the global flag '$flag'\n") 
+				}
+			}
+    }
+  }
+	my $globalFlags = join(' ', keys(%flagsFound));
+	$cflags = "$globalFlags $cflags";
+}
+
 #builds the files requested
+#Uses scanForRebuildFiles to find the .o files that needs to be rebuild
+#Uses threadBuildFiles to perform the actual build
+#Then uses scanForRebuildFiles to find the files that need to be relinked 
 sub buildFiles
 {
   #create the output dir if it dos't exist.
@@ -1037,8 +1079,9 @@ sub buildFiles
     #rebuild (in order to re build the latest modifications fisrt)
     $rebuildOFiles{$file}=getTime("$path$file.$codeSuffix");
   }
-  
-  
+
+	#Call the pre compile function just before we start to build files
+	&$beforeCompileRunRef();
   my $buildMessage = "Building files";
   if ($numberOfThreads != 1){
     $buildMessage .= " (multi threaded using $numberOfThreads threads)";
@@ -1242,6 +1285,7 @@ if ($doClean == 1){
 }
 
 if ($doBuild == 1){
+	getGlobalFlags();
   buildFiles();
 }
 if ($doTest){
