@@ -69,8 +69,12 @@ my %rebuildOFilesArguments:shared=();
 my $currentOFileNumber:shared = 1;
 #the total number of O files needing to be build
 my $numberOfOFiles:shared = -1;
+
 #The time we started to compile files
 my $compileStartTime:shared = 0;
+
+#If true buildpp will emit warnings about duplicate files
+my $warnDuplicateFiles = 1;
 
 #a hash from files to modification times, for the exe files that needs to be
 #rebuild this run.
@@ -366,8 +370,11 @@ sub findFilesInDir
           if (!exists($fileMapping{$entry})){
             $fileMapping{$entry} = $dirName."/";
             #print "found $entry in $dirName\n";
-        }
-      
+          }
+	  elsif ($warnDuplicateFiles) {
+	      my $duplicateFolder = $fileMapping{$entry};
+	      printWarning("Ignoring duplicate file $fileName, as it already was found in\n                        $duplicateFolder\n");
+	  }
         }
         elsif ($_ =~ /\.auto$/){
           my $name = $_;

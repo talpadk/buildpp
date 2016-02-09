@@ -136,7 +136,7 @@ will be deleted on clean! (DEFAULT="build/").
 bf($cleanConfirm) If true you are requested to confirm when cleaning
 (DEFAULT=1).
 
-bf($useDistcc)) If true all compile commands will be prefixed with 
+bf($useDistcc) If true all compile commands will be prefixed with 
 "distcc " (DEFAULT=0), additional if bf($numberOfThreads)
 has't been set it will
 be set to the number of hosts in the environment variable
@@ -149,6 +149,10 @@ may want to use em($cleanConfirm=0) as well.
 
 bf($numberOfThreads) The number of threads to use when compiling
 object files (DEFAULT=1)
+
+bf($warnDuplicateFiles) If true buildpp will warn the user of files that
+has the same names in the search path, this can be fixed by ignoring
+the unwanted path in "modulelist" (DEFAULT=1)
 
 bf(CALLBACKS)
 
@@ -194,8 +198,8 @@ $colourWarning = "\033[33m",
 $colourGirlie = "\033[35m"
 )
 
-bf($useColours) See bf(-usecolours). If false the colour entrys will not be used, note
-that it is not all terminals that understands the colourcodes (DEFAULT=0). 
+bf($useColours) See bf(-usecolours). If false the colour entries will not be used, note
+that it is not all terminals that understands the colour codes (DEFAULT=0). 
 
 bf($verbose) Displays lots of information if true (DEFAULT=0).
 
