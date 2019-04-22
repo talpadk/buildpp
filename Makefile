@@ -1,6 +1,6 @@
 
 man = man
-html = mozilla
+html = firefox
 
 .PHONY : all
 all: buildpp.1.gz buildpp.html
@@ -31,10 +31,6 @@ install:
 .PHONY: test
 test:
 	./buildpp.pl
-
-.PHONY: webupdate
-webupdate: 
-	bash doWebUpdate.sh
 
 .PHONY : clean
 clean:
