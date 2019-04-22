@@ -30,7 +30,7 @@ install:
 
 .PHONY: test
 test:
-	./buildpp.pl
+	./buildpp.pl --test "" helloworld
 
 .PHONY : clean
 clean:
