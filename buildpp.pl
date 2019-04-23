@@ -651,7 +651,6 @@ sub parseFileCached{
 
   if ($dTime == -1 or $dTime <= $fileTime){
     $rebuild = 1;
-    $colourVerbose."new".$colourNormal."\n";
   }
   else {
     #dfile newer that source, now we need to test .dfiles that this file depends on
