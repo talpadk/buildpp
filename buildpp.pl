@@ -1086,8 +1086,6 @@ sub getGlobalFlags
 #Then uses scanForRebuildFiles to find the files that need to be relinked 
 sub buildFiles
 {
-  #create the output dir if it dos't exist.
-  buildDirTest();
   print $colourAction."Finding files needing to be rebuild$colourNormal\n";
 
   scanForRebuildFiles();
@@ -1261,6 +1259,9 @@ if ($rescanFiles){
 }
 
 fixVariablesWithDefaults();
+
+#ensure that the build directories exists
+buildDirTest();
 
 checkForTargetClean();
 
