@@ -367,13 +367,15 @@ sub findFilesInDir
         if ($_ =~ /(^.*)($includeSuffix)$/){
           $usableFiles = 1;
           my $entry = $_;
-          if (!exists($fileMapping{$entry})){
-            $fileMapping{$entry} = $dirName."/";
-            #print "found $entry in $dirName\n";
-          }
-	  elsif ($warnDuplicateFiles) {
+          if (!exists($dontSearchForFiles{$fileName})){
+            if (!exists($fileMapping{$entry})){
+	      $fileMapping{$entry} = $dirName."/";
+              #print "found $entry in $dirName with filename $fileName\n";
+	    }
+            elsif ($warnDuplicateFiles) {
 	      my $duplicateFolder = $fileMapping{$entry};
 	      printWarning("Ignoring duplicate file $fileName, as it already was found in\n                        $duplicateFolder\n");
+	    }
 	  }
         }
         elsif ($_ =~ /\.auto$/){
