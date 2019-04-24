@@ -546,7 +546,7 @@ sub parseFile
 	  }
         }
       }
-      if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\#lazylinking|\#global_cflags)(\s?[^\r^\n]*)/){
+      if ($line =~ /\/{2,3}(\#cflags|\#ldflags|\#exe|\#target|\#link|\#lazylinking|\#global_cflags)(\s?[^\r^\n]*)/){
         push (@includeList, ($1.$2));
       }
     } 
