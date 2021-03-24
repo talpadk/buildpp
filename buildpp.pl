@@ -189,6 +189,9 @@ my $showDBuild:shared = 0;
 #If true always shows the command used for compilation (else just on error)
 my $showCompilerCommand:shared = 0;
 
+#If true the compiler command willnot be shown on error
+my $hideCompileCommandOnError = 0;
+
 #If true always shows the command used for linking (else just on error)
 my $showLinkerCommand:shared = 0;
 
@@ -802,10 +805,10 @@ sub buildObjectFile
   if ($? != 0) {
     $globalMutex->down;
     print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
-    if (!$showCompilerCommand){
-      $buildFailed = 1;
+    if (!$showCompilerCommand && !$hideCompileCommandOnError){
       print "$command\n";
     }
+    $buildFailed = 1;
     $globalMutex->up;
     unlink($filename.".".$objectSuffix);
     print $colourError."   Sorry   $colourNormal\n";
