@@ -486,7 +486,6 @@ sub parseFile
   if ($verbose){
     print $colourVerbose."Parsing file $filename".$colourNormal."\n";
   }
-  print  $colourVerbose."Parsing file $filename".$colourNormal."\n";
   
   if (!exists($fileMapping{$filename})){
       if ($ignoreMissingCodeFiles){
