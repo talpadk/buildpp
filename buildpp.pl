@@ -172,7 +172,9 @@ my $colourError:shared = "\033[33;41m";
 my $colourAction:shared = "\033[32m";
 my $colourExternal:shared = "\033[36m";
 my $colourWarning:shared = "\033[33m";
-my $colourGirlie:shared = "\033[35m"; 
+my $colourGirlie:shared = "\033[35m";
+my $clearLineEnd = "\33[K";
+my $cursorHome = "\r";
 
 #If false the colour entrys will not be used.
 my $useColours:shared = 0;
@@ -182,6 +184,9 @@ my $verbose:shared = 0;
 
 #If true displays information that you normally dont need nor want.
 my $girlie:shared = 0;
+
+#The style og progress information display, valid options are "single" and "multi"
+my $progressType:shared = "single";
 
 #If true show when we rebuild .d files.
 my $showDBuild:shared = 0;
@@ -791,13 +796,19 @@ sub buildObjectFile
   }
   my $command = "$compilerCommand -o $buildDir$filename.$objectSuffix $comileArguments $path$filename.$codeSuffix";
 
-  print $colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
-        "$filename.o$colourNormal\n";
+  if ($progressType eq "multi") {
+      print $colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
+	  "$filename.o$colourNormal\n";
+  }
+  else {
+      print $cursorHome.$colourAction."$currentOFileNumber/$numberOfOFiles $progress Compiling ".
+	  "$filename.o$colourNormal".$clearLineEnd.$cursorHome;
+  }
 
   $currentOFileNumber++;
   
   if ($showCompilerCommand == 1){
-      print "$command\n";
+      print "$command$clearLineEnd\n";
   }
   $globalMutex->up;
   
@@ -806,12 +817,12 @@ sub buildObjectFile
     $globalMutex->down;
     print $colourError."Compiling of $filename.$objectSuffix failed$colourNormal\n";
     if (!$showCompilerCommand && !$hideCompileCommandOnError){
-      print "$command\n";
+      print "$command$clearLineEnd\n";
     }
     $buildFailed = 1;
     $globalMutex->up;
     unlink($filename.".".$objectSuffix);
-    print $colourError."   Sorry   $colourNormal\n";
+    print $colourError."   Sorry   $colourNormal$clearLineEnd\n";
   }
   #invalidate object files timestamp cache
   $globalMutex->down;
@@ -1132,7 +1143,7 @@ sub buildFiles
   }
   
   scanForRebuildFiles();
-  print $colourAction."Linking files$colourNormal\n";
+  print $colourAction."Linking files$colourNormal$clearLineEnd\n";
   for my $file (keys %rebuildExeFiles){
     buildExeFile($file);
   }
