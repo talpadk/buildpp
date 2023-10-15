@@ -154,6 +154,24 @@ bf($warnDuplicateFiles) If true buildpp will warn the user of files that
 has the same names in the search path, this can be fixed by ignoring
 the unwanted path in "modulelist" (DEFAULT=1)
 
+bf(LANGUAGE SERVERS)
+
+Buildpp supports generating a language server configuration file (currently for ccls),
+the file will be build each time buildpp builds a target.
+Hence after you have build a target the language server config matches that target
+
+
+bf($languageServerTemplateFile) name of the file containing the template for the language server config file,
+if not empty buildpp will generate a config. Suggested name ".ccls_template".
+The template file often just contains line specifying compiler then a line with
+the content "%%%include_path%%%" (DEFAULT="")
+
+bf($languageServerOutputFile) the name of the file where the config will be written,
+may in the future be used to detect the type of language server (DEFAULT=".ccls")
+
+bf($languageServerIncludePathKeyword) defines the text that will be replaced by the compiler options inside the template file
+(DEFAULT="%%%include_path%%%")
+
 bf(CALLBACKS)
 
 bf($postProcessingRef) is a reference to a function that is called

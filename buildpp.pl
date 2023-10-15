@@ -182,6 +182,11 @@ my $useColours:shared = 0;
 #Displays lots of information if true.
 my $verbose:shared = 0;
 
+my $languageServerTemplateFile = "";
+my $languageServerOutputFile = ".ccls";
+my $languageServerIncludePathKeyword = "%%%include_path%%%";
+    
+
 #If true displays information that you normally dont need nor want.
 my $girlie:shared = 0;
 
@@ -1238,6 +1243,58 @@ sub checkForTargetClean {
 	updateCheckForTargetCleanCache();
 }
 
+sub generateLanguageServerConfig {
+  if (-e $languageServerTemplateFile){
+    open(my $templateFile, "<$languageServerTemplateFile") or die("Unable to read '$languageServerTemplateFile'\n");
+    local $/; # enable localized slurp mode
+    my $template = <$templateFile>;
+    close($templateFile);
+
+    my $newline = "\n";
+    my $data = join($newline, split(/\s+/, $incDirs));
+    if (length($data) > 0){
+      $data .= $newline;
+    }
+
+
+    #Splits up the $cflags and does a simplistic join of backticks (no back ticks inside backticks)
+    my @splitFlags = split(/\s+/, $cflags);
+    my @flags;
+    my $insideBackticks = 0;
+    my $joinString = "";                                
+    for my $flag (@splitFlags){
+      if ($flag eq "") {
+        next;
+      }
+      if (substr($flag, 0, 1) eq '`'){
+        $insideBackticks = 1;
+        $flag = substr($flag, 1);
+      }
+      if (!$insideBackticks){
+        push(@flags, $flag);
+      }
+      else {
+        $joinString .= " ".$flag;
+        if (substr($flag, -1) eq '`'){
+          $insideBackticks = 0;
+          $joinString =~ s/\s+//;
+          $joinString = substr($joinString, 0, -1);
+          $joinString =~ s/\s+$//;
+          push(@flags,split(/\s+/,`$joinString`));
+          $joinString = "";
+        }
+      }
+    }
+    $data .= join($newline, @flags);
+    
+    $template  =~ s/$languageServerIncludePathKeyword/$data/g;
+    
+    open(my $output, ">$languageServerOutputFile") or die("Unable to write to $languageServerOutputFile");
+    print $output $template;
+    close($output)   
+  }
+}
+
 #====================== Start of main function below this point =======================
 
 readConfigFile("localbuild.pl");
@@ -1319,8 +1376,9 @@ if ($doClean == 1){
 }
 
 if ($doBuild == 1){
-	getGlobalFlags();
+  getGlobalFlags();
   buildFiles();
+  generateLanguageServerConfig();
 }
 if ($doTest){
   testFiles();
